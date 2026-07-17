@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ImageUploader } from '@/components/ImageUploader';
 import type { Shop } from '@/lib/types';
 
 export function ShopProfile() {
@@ -101,19 +102,19 @@ export function ShopProfile() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="label">Logo URL</label>
-            <input
-              className="input"
-              value={form.logoUrl}
-              onChange={(e) => set('logoUrl', e.target.value)}
+            <label className="label">Logo</label>
+            <ImageUploader
+              multiple={false}
+              value={form.logoUrl ? [form.logoUrl] : []}
+              onChange={(urls) => set('logoUrl', urls[0] ?? '')}
             />
           </div>
           <div>
-            <label className="label">Banner URL</label>
-            <input
-              className="input"
-              value={form.bannerUrl}
-              onChange={(e) => set('bannerUrl', e.target.value)}
+            <label className="label">Banner</label>
+            <ImageUploader
+              multiple={false}
+              value={form.bannerUrl ? [form.bannerUrl] : []}
+              onChange={(urls) => set('bannerUrl', urls[0] ?? '')}
             />
           </div>
         </div>

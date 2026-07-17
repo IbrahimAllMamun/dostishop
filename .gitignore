@@ -29,3 +29,7 @@ Thumbs.db
 
 # Docker volumes (safety)
 pgdata/
+
+# Locally stored uploads (dev fallback when Cloudinary isn't configured)
+uploads/
+api/uploads/

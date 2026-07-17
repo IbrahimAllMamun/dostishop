@@ -5,6 +5,7 @@ import { shopRouter } from './shop.routes';
 import { productRouter } from './product.routes';
 import { orderRouter } from './order.routes';
 import { listBanners, getPublicSettings } from '../controllers/content.controller';
+import { uploadRouter } from './upload.routes';
 
 export const router = Router();
 
@@ -13,5 +14,6 @@ router.use('/categories', categoryRouter);
 router.use('/shops', shopRouter);
 router.use('/products', productRouter);
 router.use('/orders', orderRouter);
+router.use('/uploads', uploadRouter);
 router.get('/banners', listBanners);
 router.get('/settings', getPublicSettings);

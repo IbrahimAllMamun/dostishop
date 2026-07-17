@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { ImageUploader } from '@/components/ImageUploader';
 import type { Category } from '@/lib/types';
 
-interface ImageRow {
-  url: string;
-}
 interface VariantRow {
   size: string;
   color: string;
@@ -29,7 +27,7 @@ export function ProductForm() {
     isActive: true,
     isFeatured: false,
   });
-  const [images, setImages] = useState<ImageRow[]>([{ url: '' }]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([
     { size: '', color: '', stockQty: '0', priceOverride: '' },
   ]);
@@ -56,9 +54,7 @@ export function ProductForm() {
         salePrice: form.salePrice ? Number(form.salePrice) : undefined,
         isActive: form.isActive,
         isFeatured: form.isFeatured,
-        images: images
-          .filter((i) => i.url.trim())
-          .map((i, idx) => ({ url: i.url.trim(), sortOrder: idx })),
+        images: imageUrls.map((url, idx) => ({ url, sortOrder: idx })),
         variants: variants
           .filter((v) => v.size || v.color || Number(v.stockQty) > 0)
           .map((v) => ({
@@ -174,40 +170,12 @@ export function ProductForm() {
 
         {/* Images */}
         <div className="card space-y-3 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Image URLs</h2>
-            <button
-              type="button"
-              onClick={() => setImages((i) => [...i, { url: '' }])}
-              className="btn-ghost btn-sm"
-            >
-              + Add image
-            </button>
-          </div>
+          <h2 className="font-semibold">Product images</h2>
           <p className="text-xs text-muted">
-            Paste image URLs for now — direct upload (Cloudinary) is coming next.
+            Upload from your device (max 5MB each). Stored locally in dev; on Cloudinary when
+            configured.
           </p>
-          {images.map((img, idx) => (
-            <div key={idx} className="flex gap-2">
-              <input
-                className="input"
-                placeholder="https://…"
-                value={img.url}
-                onChange={(e) =>
-                  setImages((arr) => arr.map((x, i) => (i === idx ? { url: e.target.value } : x)))
-                }
-              />
-              {images.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setImages((arr) => arr.filter((_, i) => i !== idx))}
-                  className="btn-ghost btn-sm"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          <ImageUploader value={imageUrls} onChange={setImageUrls} />
         </div>
 
         {/* Variants */}

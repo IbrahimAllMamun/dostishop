@@ -16,6 +16,15 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  // Multer upload errors (e.g. file too large)
+  if (err && typeof err === 'object' && (err as { name?: string }).name === 'MulterError') {
+    const m = err as { code?: string; message: string };
+    res.status(400).json({
+      error: m.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 5MB)' : m.message,
+    });
+    return;
+  }
+
   // Prisma unique-constraint & not-found errors surface as 500 unless mapped; keep it simple for now.
   console.error(err);
   res.status(500).json({
