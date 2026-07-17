@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { ImageUploader } from '@/components/ImageUploader';
-import type { Category } from '@/lib/types';
+import type { Category, Product } from '@/lib/types';
 
 interface VariantRow {
+  id?: string;
   size: string;
   color: string;
   stockQty: string;
   priceOverride: string;
 }
 
+const emptyVariant: VariantRow = { size: '', color: '', stockQty: '0', priceOverride: '' };
+
 export function ProductForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(isEdit);
 
   const [form, setForm] = useState({
     name: '',
@@ -28,13 +35,44 @@ export function ProductForm() {
     isFeatured: false,
   });
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [variants, setVariants] = useState<VariantRow[]>([
-    { size: '', color: '', stockQty: '0', priceOverride: '' },
-  ]);
+  const [variants, setVariants] = useState<VariantRow[]>([{ ...emptyVariant }]);
 
   useEffect(() => {
     api.get<{ categories: Category[] }>('/categories').then((d) => setCategories(d.categories));
   }, []);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    api
+      .get<{ product: Product }>(`/products/mine/${id}`)
+      .then((d) => {
+        const p = d.product;
+        setForm({
+          name: p.name,
+          description: p.description ?? '',
+          brand: p.brand ?? '',
+          categoryId: p.categoryId ?? '',
+          basePrice: String(Number(p.basePrice)),
+          salePrice: p.salePrice != null ? String(Number(p.salePrice)) : '',
+          isActive: p.isActive,
+          isFeatured: p.isFeatured,
+        });
+        setImageUrls((p.images ?? []).map((im) => im.url));
+        setVariants(
+          (p.variants ?? []).length
+            ? (p.variants ?? []).map((v) => ({
+                id: v.id,
+                size: v.size ?? '',
+                color: v.color ?? '',
+                stockQty: String(v.stockQty),
+                priceOverride: v.priceOverride != null ? String(Number(v.priceOverride)) : '',
+              }))
+            : [{ ...emptyVariant }],
+        );
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [id, isEdit]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -56,15 +94,20 @@ export function ProductForm() {
         isFeatured: form.isFeatured,
         images: imageUrls.map((url, idx) => ({ url, sortOrder: idx })),
         variants: variants
-          .filter((v) => v.size || v.color || Number(v.stockQty) > 0)
+          .filter((v) => v.id || v.size || v.color || Number(v.stockQty) > 0)
           .map((v) => ({
+            ...(v.id ? { id: v.id } : {}),
             size: v.size || undefined,
             color: v.color || undefined,
             stockQty: Number(v.stockQty) || 0,
             priceOverride: v.priceOverride ? Number(v.priceOverride) : undefined,
           })),
       };
-      await api.post('/products', payload);
+      if (isEdit) {
+        await api.patch(`/products/${id}`, payload);
+      } else {
+        await api.post('/products', payload);
+      }
       navigate('/vendor/products');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
@@ -73,9 +116,11 @@ export function ProductForm() {
     }
   }
 
+  if (loading) return <p className="text-muted">Loading…</p>;
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">New product</h1>
+      <h1 className="text-2xl font-bold">{isEdit ? 'Edit product' : 'New product'}</h1>
       {error && <div className="rounded-lg bg-sale/10 px-4 py-3 text-sm text-sale">{error}</div>}
 
       <form onSubmit={submit} className="space-y-6">
@@ -184,16 +229,14 @@ export function ProductForm() {
             <h2 className="font-semibold">Variants &amp; stock</h2>
             <button
               type="button"
-              onClick={() =>
-                setVariants((v) => [...v, { size: '', color: '', stockQty: '0', priceOverride: '' }])
-              }
+              onClick={() => setVariants((v) => [...v, { ...emptyVariant }])}
               className="btn-ghost btn-sm"
             >
               + Add variant
             </button>
           </div>
           {variants.map((v, idx) => (
-            <div key={idx} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div key={v.id ?? idx} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               <input
                 className="input"
                 placeholder="Size"
@@ -256,7 +299,7 @@ export function ProductForm() {
 
         <div className="flex gap-3">
           <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Saving…' : 'Create product'}
+            {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create product'}
           </button>
           <button type="button" onClick={() => navigate('/vendor/products')} className="btn-ghost">
             Cancel

@@ -3,6 +3,7 @@ import {
   listProducts,
   getProductBySlug,
   listMyProducts,
+  getMyProduct,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -16,6 +17,7 @@ export const productRouter = Router();
 
 // Vendor
 productRouter.get('/mine', authenticate, authorize('VENDOR'), listMyProducts);
+productRouter.get('/mine/:id', authenticate, authorize('VENDOR'), getMyProduct);
 productRouter.post('/', authenticate, authorize('VENDOR'), validate(productCreateSchema), createProduct);
 productRouter.patch(
   '/:id',

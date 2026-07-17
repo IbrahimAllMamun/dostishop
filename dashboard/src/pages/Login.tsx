@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth, type AuthUser } from '@/store/auth';
 
@@ -68,8 +68,11 @@ export function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-muted">
-          Vendors: sign up on the storefront. Contact admin for approval.
+        <p className="mt-6 text-center text-sm text-muted">
+          Want to sell with us?{' '}
+          <Link to="/signup" className="font-medium text-primary hover:underline">
+            Create a shop
+          </Link>
         </p>
       </div>
     </div>

@@ -147,29 +147,119 @@ export const createProduct = asyncHandler(async (req, res) => {
   res.status(201).json({ product });
 });
 
+export const getMyProduct = asyncHandler(async (req, res) => {
+  const shop = await getOwnShop(req.user!.sub);
+  const product = await prisma.product.findFirst({
+    where: { id: req.params.id, shopId: shop.id },
+    include: { images: { orderBy: { sortOrder: 'asc' } }, variants: true },
+  });
+  if (!product) throw new ApiError(404, 'Product not found');
+  res.json({ product });
+});
+
+interface VariantInput {
+  id?: string;
+  sku?: string;
+  size?: string;
+  color?: string;
+  priceOverride?: number;
+  stockQty?: number;
+}
+
 export const updateProduct = asyncHandler(async (req, res) => {
   const shop = await requireActiveShop(req.user!.sub);
-  const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
+  const existing = await prisma.product.findUnique({
+    where: { id: req.params.id },
+    include: { variants: true },
+  });
   if (!existing || existing.shopId !== shop.id) throw new ApiError(404, 'Product not found');
 
-  const { name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured } = req.body;
-  const data: Prisma.ProductUpdateInput = {
-    description,
-    brand,
-    basePrice,
-    salePrice,
-    isActive,
-    isFeatured,
-  };
-  if (name !== undefined) {
-    data.name = name;
-    data.slug = slugify(name);
-  }
-  if (categoryId !== undefined) {
-    data.category = categoryId ? { connect: { id: categoryId } } : { disconnect: true };
-  }
+  const { name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images, variants } =
+    req.body;
 
-  const product = await prisma.product.update({ where: { id: existing.id }, data });
+  const product = await prisma.$transaction(async (tx) => {
+    const data: Prisma.ProductUpdateInput = {
+      description,
+      brand,
+      basePrice,
+      salePrice,
+      isActive,
+      isFeatured,
+    };
+    // Keep the slug stable across edits so product URLs don't break
+    if (name !== undefined) data.name = name;
+    if (categoryId !== undefined) {
+      data.category = categoryId ? { connect: { id: categoryId } } : { disconnect: true };
+    }
+    await tx.product.update({ where: { id: existing.id }, data });
+
+    // Replace images if provided
+    if (images !== undefined) {
+      await tx.productImage.deleteMany({ where: { productId: existing.id } });
+      if (images.length) {
+        await tx.productImage.createMany({
+          data: (images as Array<{ url: string; alt?: string; sortOrder?: number }>).map(
+            (img, i) => ({
+              productId: existing.id,
+              url: img.url,
+              alt: img.alt,
+              sortOrder: img.sortOrder ?? i,
+            }),
+          ),
+        });
+      }
+    }
+
+    // Sync variants if provided: update kept, create new, remove missing
+    if (variants !== undefined) {
+      const incoming = variants as VariantInput[];
+      const keepIds = incoming.filter((v) => v.id).map((v) => v.id as string);
+      const removeIds = existing.variants
+        .filter((v) => !keepIds.includes(v.id))
+        .map((v) => v.id);
+
+      if (removeIds.length) {
+        // Detach from past order items (keep order history), then delete
+        await tx.orderItem.updateMany({
+          where: { variantId: { in: removeIds } },
+          data: { variantId: null },
+        });
+        await tx.productVariant.deleteMany({ where: { id: { in: removeIds } } });
+      }
+
+      for (const v of incoming) {
+        if (v.id) {
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: {
+              size: v.size ?? null,
+              color: v.color ?? null,
+              sku: v.sku ?? null,
+              priceOverride: v.priceOverride ?? null,
+              stockQty: v.stockQty ?? 0,
+            },
+          });
+        } else {
+          await tx.productVariant.create({
+            data: {
+              productId: existing.id,
+              size: v.size,
+              color: v.color,
+              sku: v.sku,
+              priceOverride: v.priceOverride ?? null,
+              stockQty: v.stockQty ?? 0,
+            },
+          });
+        }
+      }
+    }
+
+    return tx.product.findUniqueOrThrow({
+      where: { id: existing.id },
+      include: { images: { orderBy: { sortOrder: 'asc' } }, variants: true },
+    });
+  });
+
   res.json({ product });
 });
 

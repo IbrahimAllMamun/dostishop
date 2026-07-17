@@ -96,6 +96,12 @@ export function VendorProducts() {
                     </span>
                   </td>
                   <td className="td text-right">
+                    <Link
+                      to={`/vendor/products/${p.id}/edit`}
+                      className="mr-4 text-sm text-primary hover:underline"
+                    >
+                      Edit
+                    </Link>
                     <button onClick={() => remove(p.id)} className="text-sm text-muted hover:text-sale">
                       Delete
                     </button>
