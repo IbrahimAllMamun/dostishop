@@ -1,0 +1,23 @@
+{
+  "name": "boutique-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-vendor e-commerce marketplace (PERN + Next.js)",
+  "workspaces": [
+    "api",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace api",
+    "build:api": "npm run build --workspace api",
+    "db:up": "docker compose up -d db adminer",
+    "db:down": "docker compose down",
+    "db:generate": "npm run prisma:generate --workspace api",
+    "db:migrate": "npm run prisma:migrate --workspace api",
+    "db:seed": "npm run seed --workspace api",
+    "db:studio": "npm run prisma:studio --workspace api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

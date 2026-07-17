@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  SUPER_ADMIN
+  VENDOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ShopStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  COD
+  BKASH
+  SSLCOMMERZ
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// ---------- Identity ----------
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         UserRole   @default(VENDOR)
+  status       UserStatus @default(ACTIVE)
+  shop         Shop?      @relation("ShopOwner")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Shop {
+  id             String     @id @default(cuid())
+  name           String
+  slug           String     @unique
+  ownerId        String     @unique
+  owner          User       @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl        String?
+  bannerUrl      String?
+  description    String?
+  phone          String?
+  address        String?
+  status         ShopStatus @default(PENDING)
+  commissionRate Decimal    @default(10.0) @db.Decimal(5, 2) // percent taken by platform
+  products       Product[]
+  subOrders      SubOrder[]
+  payouts        Payout[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+// ---------- Catalog ----------
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  imageUrl  String?
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  shopId      String
+  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category?        @relation(fields: [categoryId], references: [id])
+  name        String
+  slug        String           @unique
+  description String?
+  brand       String?
+  basePrice   Decimal          @db.Decimal(10, 2)
+  salePrice   Decimal?         @db.Decimal(10, 2)
+  isActive    Boolean          @default(true)
+  isFeatured  Boolean          @default(false)
+  images      ProductImage[]
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([shopId])
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id            String      @id @default(cuid())
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku           String?     @unique
+  size          String?
+  color         String?
+  priceOverride Decimal?    @db.Decimal(10, 2)
+  stockQty      Int         @default(0)
+  orderItems    OrderItem[]
+
+  @@index([productId])
+}
+
+// ---------- Orders ----------
+// One customer checkout = one Order, split into one SubOrder per shop.
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNo       String        @unique
+  customerName  String
+  phone         String
+  email         String?
+  address       String
+  city          String
+  zone          String // inside_dhaka | outside_dhaka
+  note          String?
+  paymentMethod PaymentMethod @default(COD)
+  subtotal      Decimal       @db.Decimal(10, 2)
+  shippingTotal Decimal       @db.Decimal(10, 2)
+  discountTotal Decimal       @default(0) @db.Decimal(10, 2)
+  grandTotal    Decimal       @db.Decimal(10, 2)
+  subOrders     SubOrder[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([phone])
+}
+
+model SubOrder {
+  id               String        @id @default(cuid())
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shopId           String
+  shop             Shop          @relation(fields: [shopId], references: [id])
+  status           OrderStatus   @default(PENDING)
+  paymentStatus    PaymentStatus @default(UNPAID)
+  subtotal         Decimal       @db.Decimal(10, 2)
+  shippingCost     Decimal       @default(0) @db.Decimal(10, 2)
+  commissionRate   Decimal       @db.Decimal(5, 2)
+  commissionAmount Decimal       @db.Decimal(10, 2)
+  vendorPayout     Decimal       @db.Decimal(10, 2)
+  trackingNo       String?
+  items            OrderItem[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([shopId])
+  @@index([orderId])
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  subOrderId   String
+  subOrder     SubOrder        @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
+  variantId    String?
+  variant      ProductVariant? @relation(fields: [variantId], references: [id])
+  productId    String
+  productName  String // snapshot at purchase time
+  variantLabel String? // snapshot e.g. "M / Black"
+  unitPrice    Decimal         @db.Decimal(10, 2) // snapshot
+  quantity     Int
+  lineTotal    Decimal         @db.Decimal(10, 2)
+
+  @@index([subOrderId])
+}
+
+// ---------- Marketing & ops ----------
+
+model Coupon {
+  id         String       @id @default(cuid())
+  code       String       @unique
+  type       DiscountType @default(PERCENTAGE)
+  value      Decimal      @db.Decimal(10, 2)
+  minOrder   Decimal      @default(0) @db.Decimal(10, 2)
+  usageLimit Int?
+  usageCount Int          @default(0)
+  expiresAt  DateTime?
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  linkUrl   String?
+  title     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id         String       @id @default(cuid())
+  shopId     String
+  shop       Shop         @relation(fields: [shopId], references: [id])
+  periodFrom DateTime
+  periodTo   DateTime
+  gross      Decimal      @db.Decimal(10, 2)
+  commission Decimal      @db.Decimal(10, 2)
+  net        Decimal      @db.Decimal(10, 2)
+  status     PayoutStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+
+  @@index([shopId])
+}
+
+model Setting {
+  id                   String   @id @default(cuid())
+  storeName            String   @default("Marketplace")
+  shippingInsideDhaka  Decimal  @default(60) @db.Decimal(10, 2)
+  shippingOutsideDhaka Decimal  @default(120) @db.Decimal(10, 2)
+  supportPhone         String?
+  supportEmail         String?
+  updatedAt            DateTime @updatedAt
+}
