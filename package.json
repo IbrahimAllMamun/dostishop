@@ -5,11 +5,14 @@
   "description": "Multi-vendor e-commerce marketplace (PERN + Next.js)",
   "workspaces": [
     "api",
+    "store-frontend",
     "packages/*"
   ],
   "scripts": {
     "dev:api": "npm run dev --workspace api",
+    "dev:store": "npm run dev --workspace store-frontend",
     "build:api": "npm run build --workspace api",
+    "build:store": "npm run build --workspace store-frontend",
     "db:up": "docker compose up -d db adminer",
     "db:down": "docker compose down",
     "db:generate": "npm run prisma:generate --workspace api",
