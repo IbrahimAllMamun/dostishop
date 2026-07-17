@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
 import { env } from '../config/env';
 
@@ -25,7 +26,21 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
-  // Prisma unique-constraint & not-found errors surface as 500 unless mapped; keep it simple for now.
+  // Map common Prisma errors to sensible HTTP codes
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      const target = (err.meta?.target as string[] | undefined)?.join(', ');
+      res.status(409).json({
+        error: target ? `A record with this ${target} already exists` : 'Duplicate value',
+      });
+      return;
+    }
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Record not found' });
+      return;
+    }
+  }
+
   console.error(err);
   res.status(500).json({
     error: 'Internal server error',

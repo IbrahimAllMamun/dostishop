@@ -29,9 +29,18 @@ export function Footer() {
 
         <div className="space-y-2 text-sm">
           <p className="font-medium">Help</p>
-          <p className="text-muted">Delivery in 2–5 days</p>
-          <p className="text-muted">Cash on delivery</p>
-          <p className="text-muted">Easy returns*</p>
+          <Link href="/about" className="block text-muted hover:text-primary">
+            About us
+          </Link>
+          <Link href="/contact" className="block text-muted hover:text-primary">
+            Contact
+          </Link>
+          <Link href="/faq" className="block text-muted hover:text-primary">
+            FAQ
+          </Link>
+          <Link href="/returns" className="block text-muted hover:text-primary">
+            Returns &amp; refunds
+          </Link>
         </div>
 
         <div className="space-y-2 text-sm">
