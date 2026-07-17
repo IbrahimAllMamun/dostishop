@@ -72,8 +72,23 @@ export interface CheckoutPayload {
   city: string;
   zone: 'inside_dhaka' | 'outside_dhaka';
   note?: string;
+  couponCode?: string;
   paymentMethod: 'COD';
   items: Array<{ productId: string; variantId?: string; quantity: number }>;
+}
+
+export async function validateCoupon(
+  code: string,
+  subtotal: number,
+): Promise<{ code: string; discount: number }> {
+  const res = await fetch(`${API_BASE}/coupons/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, subtotal }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error ?? 'Invalid coupon');
+  return data;
 }
 
 export async function postCheckout(payload: CheckoutPayload): Promise<Order> {

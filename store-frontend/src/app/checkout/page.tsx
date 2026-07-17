@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCart } from '@/store/cart';
 import { formatTk } from '@/lib/format';
 import { useHasHydrated } from '@/lib/useHasHydrated';
-import { getSettings, postCheckout } from '@/lib/api';
+import { getSettings, postCheckout, validateCoupon } from '@/lib/api';
 import type { Order, Settings } from '@/lib/types';
 
 type Zone = 'inside_dhaka' | 'outside_dhaka';
@@ -19,6 +19,11 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [placed, setPlaced] = useState<Order | null>(null);
+
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const [form, setForm] = useState({
     customerName: '',
@@ -42,7 +47,23 @@ export default function CheckoutPage() {
       ? Number(settings?.shippingInsideDhaka ?? 60)
       : Number(settings?.shippingOutsideDhaka ?? 120);
   const shipping = perShopShipping * (shopCount || 1);
-  const grand = subtotal + shipping;
+  const discount = coupon?.discount ?? 0;
+  const grand = Math.max(0, subtotal + shipping - discount);
+
+  async function applyCoupon() {
+    setCouponError(null);
+    if (!couponInput.trim()) return;
+    setApplyingCoupon(true);
+    try {
+      const result = await validateCoupon(couponInput.trim(), subtotal);
+      setCoupon(result);
+    } catch (err) {
+      setCoupon(null);
+      setCouponError(err instanceof Error ? err.message : 'Invalid coupon');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
 
   function update(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -61,6 +82,7 @@ export default function CheckoutPage() {
         city: form.city,
         zone,
         note: form.note || undefined,
+        couponCode: coupon?.code,
         paymentMethod: 'COD',
         items: items.map((i) => ({
           productId: i.productId,
@@ -266,6 +288,45 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
+          {/* Coupon */}
+          <div className="border-t border-ink/10 pt-3">
+            {coupon ? (
+              <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2 text-sm">
+                <span className="text-success">
+                  Coupon <strong>{coupon.code}</strong> applied
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoupon(null);
+                    setCouponInput('');
+                  }}
+                  className="text-muted hover:text-sale"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  className="input py-2"
+                  placeholder="Coupon code"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={applyingCoupon}
+                  className="btn-outline whitespace-nowrap py-2"
+                >
+                  {applyingCoupon ? '…' : 'Apply'}
+                </button>
+              </div>
+            )}
+            {couponError && <p className="mt-1 text-xs text-sale">{couponError}</p>}
+          </div>
+
           <div className="space-y-1 border-t border-ink/10 pt-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Subtotal</span>
@@ -277,6 +338,12 @@ export default function CheckoutPage() {
               </span>
               <span>{formatTk(shipping)}</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <span>Discount</span>
+                <span>−{formatTk(discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-1 text-base font-semibold">
               <span>Total</span>
               <span>{formatTk(grand)}</span>

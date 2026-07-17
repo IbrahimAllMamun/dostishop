@@ -2,7 +2,8 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { generateOrderNo, round2 } from '../utils/helpers';
-import { Prisma } from '@prisma/client';
+import { assertCouponUsable, computeDiscount } from '../services/coupon.service';
+import { Coupon, Prisma } from '@prisma/client';
 
 interface CheckoutItem {
   productId: string;
@@ -24,17 +25,19 @@ interface Line {
 // ---- Public: guest checkout ----
 
 export const checkout = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, address, city, zone, note, paymentMethod, items } = req.body as {
-    customerName: string;
-    phone: string;
-    email?: string;
-    address: string;
-    city: string;
-    zone: 'inside_dhaka' | 'outside_dhaka';
-    note?: string;
-    paymentMethod?: 'COD' | 'BKASH' | 'SSLCOMMERZ';
-    items: CheckoutItem[];
-  };
+  const { customerName, phone, email, address, city, zone, note, paymentMethod, items, couponCode } =
+    req.body as {
+      customerName: string;
+      phone: string;
+      email?: string;
+      address: string;
+      city: string;
+      zone: 'inside_dhaka' | 'outside_dhaka';
+      note?: string;
+      paymentMethod?: 'COD' | 'BKASH' | 'SSLCOMMERZ';
+      items: CheckoutItem[];
+      couponCode?: string;
+    };
 
   const setting = await prisma.setting.findFirst();
   const shippingRate =
@@ -72,6 +75,22 @@ export const checkout = asyncHandler(async (req, res) => {
     byShop.set(product.shopId, arr);
   }
 
+  // Totals
+  const subtotalAll = round2(
+    [...byShop.values()].flat().reduce((s, l) => s + l.lineTotal, 0),
+  );
+  const shippingAll = round2(shippingRate * byShop.size);
+
+  // Optional coupon (order-level discount; platform absorbs it, vendor payouts unchanged)
+  let coupon: Coupon | null = null;
+  let discount = 0;
+  if (couponCode) {
+    coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
+    assertCouponUsable(coupon, subtotalAll);
+    discount = computeDiscount(coupon!, subtotalAll);
+  }
+
+  const grandTotal = round2(subtotalAll + shippingAll - discount);
   const orderNo = generateOrderNo();
 
   const order = await prisma.$transaction(async (tx) => {
@@ -86,14 +105,12 @@ export const checkout = asyncHandler(async (req, res) => {
         zone,
         note: note ?? null,
         paymentMethod: paymentMethod ?? 'COD',
-        subtotal: 0,
-        shippingTotal: 0,
-        grandTotal: 0,
+        subtotal: subtotalAll,
+        shippingTotal: shippingAll,
+        discountTotal: discount,
+        grandTotal,
       },
     });
-
-    let subtotalAll = 0;
-    let shippingAll = 0;
 
     for (const [shopId, lines] of byShop) {
       const shop = lines[0].product.shop;
@@ -101,9 +118,6 @@ export const checkout = asyncHandler(async (req, res) => {
       const commissionRate = Number(shop.commissionRate);
       const commissionAmount = round2((subtotal * commissionRate) / 100);
       const vendorPayout = round2(subtotal - commissionAmount);
-
-      subtotalAll += subtotal;
-      shippingAll += shippingRate; // each shop ships separately
 
       const subOrder = await tx.subOrder.create({
         data: {
@@ -140,16 +154,15 @@ export const checkout = asyncHandler(async (req, res) => {
       }
     }
 
-    subtotalAll = round2(subtotalAll);
-    shippingAll = round2(shippingAll);
+    if (coupon) {
+      await tx.coupon.update({
+        where: { id: coupon.id },
+        data: { usageCount: { increment: 1 } },
+      });
+    }
 
-    return tx.order.update({
+    return tx.order.findUniqueOrThrow({
       where: { id: created.id },
-      data: {
-        subtotal: subtotalAll,
-        shippingTotal: shippingAll,
-        grandTotal: round2(subtotalAll + shippingAll),
-      },
       include: {
         subOrders: { include: { items: true, shop: { select: { name: true, slug: true } } } },
       },

@@ -97,3 +97,15 @@ export interface Order {
   createdAt: string;
   subOrders: Array<{ id: string; status: string; shop?: { name: string } }>;
 }
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: Money;
+  minOrder: Money;
+  usageLimit?: number | null;
+  usageCount: number;
+  expiresAt?: string | null;
+  isActive: boolean;
+}

@@ -8,6 +8,7 @@ export const checkoutSchema = z.object({
   city: z.string().min(2),
   zone: z.enum(['inside_dhaka', 'outside_dhaka']),
   note: z.string().optional(),
+  couponCode: z.string().optional(),
   paymentMethod: z.enum(['COD', 'BKASH', 'SSLCOMMERZ']).optional(),
   items: z
     .array(

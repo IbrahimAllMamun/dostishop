@@ -6,6 +6,7 @@ import { Login } from '@/pages/Login';
 import { AdminDashboard } from '@/pages/admin/Dashboard';
 import { AdminShops } from '@/pages/admin/Shops';
 import { AdminCategories } from '@/pages/admin/Categories';
+import { AdminCoupons } from '@/pages/admin/Coupons';
 import { AdminOrders } from '@/pages/admin/Orders';
 import { VendorDashboard } from '@/pages/vendor/Dashboard';
 import { VendorProducts } from '@/pages/vendor/Products';
@@ -36,6 +37,7 @@ export function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/shops" element={<AdminShops />} />
           <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
         </Route>
 
