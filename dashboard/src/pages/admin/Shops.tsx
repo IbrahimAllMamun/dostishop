@@ -1,0 +1,124 @@
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { StatusBadge } from '@/components/StatusBadge';
+import { formatTk } from '@/lib/format';
+import type { Shop } from '@/lib/types';
+
+const FILTERS = ['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED'] as const;
+
+export function AdminShops() {
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('ALL');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    const q = filter === 'ALL' ? '' : `?status=${filter}`;
+    api
+      .get<{ shops: Shop[] }>(`/shops/admin${q}`)
+      .then((d) => setShops(d.shops))
+      .finally(() => setLoading(false));
+  }, [filter]);
+
+  useEffect(load, [load]);
+
+  async function setStatus(id: string, status: Shop['status']) {
+    setBusy(id);
+    try {
+      await api.patch(`/shops/admin/${id}/status`, { status });
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Shops</h1>
+        <div className="flex gap-2">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`badge ${filter === f ? 'bg-ink text-white' : 'bg-sand text-ink'}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-ink/5">
+              <th className="th">Shop</th>
+              <th className="th">Owner</th>
+              <th className="th">Commission</th>
+              <th className="th">Status</th>
+              <th className="th">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td className="td text-muted" colSpan={5}>
+                  Loading…
+                </td>
+              </tr>
+            ) : shops.length === 0 ? (
+              <tr>
+                <td className="td text-muted" colSpan={5}>
+                  No shops.
+                </td>
+              </tr>
+            ) : (
+              shops.map((s) => (
+                <tr key={s.id} className="border-b border-ink/5 last:border-0">
+                  <td className="td">
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-muted">/{s.slug}</div>
+                  </td>
+                  <td className="td">
+                    <div>{s.owner?.name}</div>
+                    <div className="text-xs text-muted">{s.owner?.email}</div>
+                  </td>
+                  <td className="td">{s.commissionRate ? `${Number(s.commissionRate)}%` : '—'}</td>
+                  <td className="td">
+                    <StatusBadge status={s.status} />
+                  </td>
+                  <td className="td">
+                    <div className="flex gap-2">
+                      {s.status !== 'ACTIVE' && (
+                        <button
+                          disabled={busy === s.id}
+                          onClick={() => setStatus(s.id, 'ACTIVE')}
+                          className="btn-primary btn-sm"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {s.status !== 'SUSPENDED' && (
+                        <button
+                          disabled={busy === s.id}
+                          onClick={() => setStatus(s.id, 'SUSPENDED')}
+                          className="btn-ghost btn-sm"
+                        >
+                          Suspend
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
