@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '@/lib/api';
+import { api, API_URL } from '@/lib/api';
+import { useAuth } from '@/store/auth';
 import { formatTk } from '@/lib/format';
 import type { Product } from '@/lib/types';
 
 export function VendorProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function load() {
     api
@@ -31,14 +35,88 @@ export function VendorProducts() {
     return (p.variants ?? []).reduce((n, v) => n + v.stockQty, 0);
   }
 
+  async function exportCsv() {
+    const token = useAuth.getState().token;
+    const res = await fetch(`${API_URL}/products/mine/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      alert('Export failed');
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'products.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importCsv(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportMsg(null);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const result = await api.post<{
+          created: number;
+          failed: number;
+          errors: Array<{ row: number; message: string }>;
+        }>('/products/mine/import', { csv: String(reader.result) });
+        setImportMsg(
+          `Imported ${result.created} product${result.created === 1 ? '' : 's'}` +
+            (result.failed
+              ? `; ${result.failed} failed (${result.errors
+                  .slice(0, 3)
+                  .map((e) => `row ${e.row}: ${e.message}`)
+                  .join('; ')})`
+              : ''),
+        );
+        load();
+      } catch (e) {
+        setImportMsg(e instanceof Error ? e.message : 'Import failed');
+      } finally {
+        setImporting(false);
+        if (fileRef.current) fileRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Link to="/vendor/products/new" className="btn-primary">
-          + Add product
-        </Link>
+        <div className="flex gap-2">
+          <button onClick={exportCsv} className="btn-ghost btn-sm">
+            ⬇ Export CSV
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            className="btn-ghost btn-sm"
+          >
+            {importing ? 'Importing…' : '⬆ Import CSV'}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => importCsv(e.target.files)}
+          />
+          <Link to="/vendor/products/new" className="btn-primary btn-sm">
+            + Add product
+          </Link>
+        </div>
       </div>
+
+      {importMsg && (
+        <div className="rounded-lg bg-sand/70 px-4 py-2 text-sm">{importMsg}</div>
+      )}
 
       <div className="card overflow-x-auto">
         <table className="w-full">

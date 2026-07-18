@@ -10,6 +10,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '../controllers/product.controller';
+import { exportMyProducts, importMyProducts } from '../controllers/product-csv.controller';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
@@ -19,6 +20,8 @@ export const productRouter = Router();
 
 // Vendor
 productRouter.get('/mine', authenticate, authorize('VENDOR'), listMyProducts);
+productRouter.get('/mine/export', authenticate, authorize('VENDOR'), exportMyProducts);
+productRouter.post('/mine/import', authenticate, authorize('VENDOR'), importMyProducts);
 productRouter.get('/mine/:id', authenticate, authorize('VENDOR'), getMyProduct);
 productRouter.post('/', authenticate, authorize('VENDOR'), validate(productCreateSchema), createProduct);
 productRouter.patch(

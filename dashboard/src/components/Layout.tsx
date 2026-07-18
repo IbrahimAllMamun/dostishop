@@ -15,6 +15,7 @@ const vendorNav = [
   { to: '/vendor', label: 'Overview', end: true },
   { to: '/vendor/products', label: 'Products' },
   { to: '/vendor/orders', label: 'Orders' },
+  { to: '/vendor/analytics', label: 'Analytics' },
   { to: '/vendor/shop', label: 'Shop profile' },
 ];
 

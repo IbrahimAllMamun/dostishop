@@ -8,6 +8,9 @@ import { listBanners, getPublicSettings } from '../controllers/content.controlle
 import { uploadRouter } from './upload.routes';
 import { couponRouter } from './coupon.routes';
 import { reviewRouter } from './review.routes';
+import { vendorAnalytics } from '../controllers/analytics.controller';
+import { authenticate } from '../middleware/auth';
+import { authorize } from '../middleware/rbac';
 
 export const router = Router();
 
@@ -19,5 +22,6 @@ router.use('/orders', orderRouter);
 router.use('/uploads', uploadRouter);
 router.use('/coupons', couponRouter);
 router.use('/reviews', reviewRouter);
+router.get('/analytics/vendor', authenticate, authorize('VENDOR'), vendorAnalytics);
 router.get('/banners', listBanners);
 router.get('/settings', getPublicSettings);

@@ -15,6 +15,7 @@ import { VendorDashboard } from '@/pages/vendor/Dashboard';
 import { VendorProducts } from '@/pages/vendor/Products';
 import { ProductForm } from '@/pages/vendor/ProductForm';
 import { VendorOrders } from '@/pages/vendor/Orders';
+import { VendorAnalytics } from '@/pages/vendor/Analytics';
 import { ShopProfile } from '@/pages/vendor/ShopProfile';
 
 function HomeRedirect() {
@@ -60,6 +61,7 @@ export function App() {
           <Route path="/vendor/products/new" element={<ProductForm />} />
           <Route path="/vendor/products/:id/edit" element={<ProductForm />} />
           <Route path="/vendor/orders" element={<VendorOrders />} />
+          <Route path="/vendor/analytics" element={<VendorAnalytics />} />
           <Route path="/vendor/shop" element={<ShopProfile />} />
         </Route>
 
