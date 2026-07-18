@@ -98,6 +98,17 @@ export interface Order {
   subOrders: Array<{ id: string; status: string; shop?: { name: string } }>;
 }
 
+export interface AbandonedCheckout {
+  id: string;
+  customerName?: string | null;
+  phone: string;
+  items: Array<{ name: string; qty: number; price: number }>;
+  subtotal: Money;
+  status: 'OPEN' | 'RECOVERED' | 'DISMISSED';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Review {
   id: string;
   customerName: string;

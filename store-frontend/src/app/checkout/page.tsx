@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/store/cart';
 import { formatTk } from '@/lib/format';
 import { useHasHydrated } from '@/lib/useHasHydrated';
-import { getSettings, postCheckout, validateCoupon } from '@/lib/api';
+import { getSettings, postCheckout, sendCheckoutIntent, validateCoupon } from '@/lib/api';
 import type { Order, Settings } from '@/lib/types';
 
 type Zone = 'inside_dhaka' | 'outside_dhaka';
@@ -39,6 +39,28 @@ export default function CheckoutPage() {
       .then(setSettings)
       .catch(() => setSettings(null));
   }, []);
+
+  // Abandoned-checkout capture: once a plausible phone is typed, record the
+  // intent (debounced). If the order is placed, the API marks it recovered.
+  const intentSent = useRef(false);
+  useEffect(() => {
+    const phone = form.phone.replace(/\D/g, '');
+    if (intentSent.current || phone.length < 11 || items.length === 0) return;
+    const t = setTimeout(() => {
+      intentSent.current = true;
+      sendCheckoutIntent({
+        customerName: form.customerName || undefined,
+        phone: form.phone,
+        items: items.map((i) => ({
+          name: i.variantLabel ? `${i.name} (${i.variantLabel})` : i.name,
+          qty: i.quantity,
+          price: i.unitPrice,
+        })),
+        subtotal: items.reduce((n, i) => n + i.unitPrice * i.quantity, 0),
+      });
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [form.phone, form.customerName, items]);
 
   const shopCount = useMemo(() => new Set(items.map((i) => i.shopSlug)).size, [items]);
   const subtotal = items.reduce((n, i) => n + i.unitPrice * i.quantity, 0);

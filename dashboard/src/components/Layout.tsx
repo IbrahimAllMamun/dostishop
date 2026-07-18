@@ -8,6 +8,7 @@ const adminNav = [
   { to: '/admin/coupons', label: 'Coupons' },
   { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/orders', label: 'Orders' },
+  { to: '/admin/abandoned', label: 'Abandoned carts' },
 ];
 
 const vendorNav = [

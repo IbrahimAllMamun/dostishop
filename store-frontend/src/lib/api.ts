@@ -194,6 +194,21 @@ export async function uploadReviewPhoto(file: File): Promise<string> {
   return data.url as string;
 }
 
+/** Fire-and-forget: record a checkout that has a phone number but isn't submitted yet. */
+export function sendCheckoutIntent(payload: {
+  customerName?: string;
+  phone: string;
+  items: Array<{ name: string; qty: number; price: number }>;
+  subtotal: number;
+}): void {
+  fetch(`${API_BASE}/orders/checkout-intent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export async function trackOrder(orderNo: string, phone: string): Promise<Order> {
   const res = await fetch(
     `${API_BASE}/orders/track?orderNo=${encodeURIComponent(orderNo)}&phone=${encodeURIComponent(phone)}`,

@@ -9,6 +9,7 @@ import { AdminShops } from '@/pages/admin/Shops';
 import { AdminCategories } from '@/pages/admin/Categories';
 import { AdminCoupons } from '@/pages/admin/Coupons';
 import { AdminReviews } from '@/pages/admin/Reviews';
+import { AdminAbandoned } from '@/pages/admin/Abandoned';
 import { AdminOrders } from '@/pages/admin/Orders';
 import { VendorDashboard } from '@/pages/vendor/Dashboard';
 import { VendorProducts } from '@/pages/vendor/Products';
@@ -42,6 +43,7 @@ export function App() {
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/abandoned" element={<AdminAbandoned />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
         </Route>
 

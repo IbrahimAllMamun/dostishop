@@ -63,6 +63,12 @@ enum ReviewStatus {
   REJECTED
 }
 
+enum AbandonedStatus {
+  OPEN
+  RECOVERED
+  DISMISSED
+}
+
 // ---------- Identity ----------
 
 model User {
@@ -289,6 +295,20 @@ model Payout {
   createdAt  DateTime     @default(now())
 
   @@index([shopId])
+}
+
+// Checkout started but never submitted — captured for call-back recovery
+model AbandonedCheckout {
+  id           String          @id @default(cuid())
+  customerName String?
+  phone        String
+  items        Json // [{ name, qty, price }]
+  subtotal     Decimal         @db.Decimal(10, 2)
+  status       AbandonedStatus @default(OPEN)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([phone, status])
 }
 
 model SearchQuery {

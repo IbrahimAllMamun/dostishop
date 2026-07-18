@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { generateOrderNo, round2 } from '../utils/helpers';
 import { assertCouponUsable, computeDiscount } from '../services/coupon.service';
-import { Coupon, Prisma } from '@prisma/client';
+import { Coupon, OrderStatus, Prisma } from '@prisma/client';
 
 interface CheckoutItem {
   productId: string;
@@ -169,7 +169,60 @@ export const checkout = asyncHandler(async (req, res) => {
     });
   });
 
+  // Any open abandoned-checkout rows for this phone are now recovered
+  prisma.abandonedCheckout
+    .updateMany({ where: { phone, status: 'OPEN' }, data: { status: 'RECOVERED' } })
+    .catch(() => {});
+
   res.status(201).json({ message: 'Order placed', order });
+});
+
+// ---- Public: abandoned-checkout capture ----
+// Fired by the storefront once a phone number is typed at checkout. If the
+// order is never placed, the row stays OPEN as a call-back lead.
+export const captureCheckoutIntent = asyncHandler(async (req, res) => {
+  const { customerName, phone, items, subtotal } = req.body as {
+    customerName?: string;
+    phone: string;
+    items: Array<{ name: string; qty: number; price: number }>;
+    subtotal: number;
+  };
+
+  const existing = await prisma.abandonedCheckout.findFirst({
+    where: { phone, status: 'OPEN' },
+  });
+
+  if (existing) {
+    await prisma.abandonedCheckout.update({
+      where: { id: existing.id },
+      data: { customerName: customerName ?? existing.customerName, items, subtotal },
+    });
+  } else {
+    await prisma.abandonedCheckout.create({
+      data: { customerName: customerName ?? null, phone, items, subtotal },
+    });
+  }
+
+  res.status(204).end();
+});
+
+export const adminListAbandoned = asyncHandler(async (req, res) => {
+  const status = (req.query.status as string) ?? 'OPEN';
+  const abandoned = await prisma.abandonedCheckout.findMany({
+    where: status === 'ALL' ? undefined : { status: status as 'OPEN' | 'RECOVERED' | 'DISMISSED' },
+    orderBy: { updatedAt: 'desc' },
+    take: 200,
+  });
+  res.json({ abandoned });
+});
+
+export const adminUpdateAbandoned = asyncHandler(async (req, res) => {
+  const { status } = req.body as { status: 'OPEN' | 'RECOVERED' | 'DISMISSED' };
+  const row = await prisma.abandonedCheckout.update({
+    where: { id: req.params.id },
+    data: { status },
+  });
+  res.json({ abandoned: row });
 });
 
 export const trackOrder = asyncHandler(async (req, res) => {
@@ -192,8 +245,9 @@ export const listMySubOrders = asyncHandler(async (req, res) => {
   const shop = await prisma.shop.findUnique({ where: { ownerId: req.user!.sub } });
   if (!shop) throw new ApiError(404, 'Shop not found');
 
+  const status = req.query.status as OrderStatus | undefined;
   const subOrders = await prisma.subOrder.findMany({
-    where: { shopId: shop.id },
+    where: { shopId: shop.id, ...(status ? { status } : {}) },
     include: {
       items: true,
       order: {

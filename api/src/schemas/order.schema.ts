@@ -21,6 +21,22 @@ export const checkoutSchema = z.object({
     .min(1, 'Cart is empty'),
 });
 
+export const checkoutIntentSchema = z.object({
+  customerName: z.string().max(80).optional(),
+  phone: z.string().min(6).max(20),
+  items: z
+    .array(
+      z.object({
+        name: z.string().max(200),
+        qty: z.number().int().positive(),
+        price: z.number().nonnegative(),
+      }),
+    )
+    .min(1)
+    .max(50),
+  subtotal: z.number().nonnegative(),
+});
+
 export const subOrderStatusSchema = z
   .object({
     status: z

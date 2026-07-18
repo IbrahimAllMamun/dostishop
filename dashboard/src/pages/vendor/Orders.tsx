@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatTk, formatDate } from '@/lib/format';
@@ -6,19 +6,31 @@ import type { SubOrder } from '@/lib/types';
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
+const TABS = [
+  { key: '', label: 'All' },
+  { key: 'PENDING', label: '📞 Needs confirmation' },
+  { key: 'CONFIRMED', label: 'Confirmed' },
+  { key: 'PROCESSING', label: 'Processing' },
+  { key: 'SHIPPED', label: 'Shipped' },
+  { key: 'DELIVERED', label: 'Delivered' },
+];
+
 export function VendorOrders() {
   const [subOrders, setSubOrders] = useState<SubOrder[]>([]);
+  const [tab, setTab] = useState('PENDING');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
-  function load() {
+  const load = useCallback(() => {
+    setLoading(true);
+    const q = tab ? `?status=${tab}` : '';
     api
-      .get<{ subOrders: SubOrder[] }>('/orders/vendor/mine')
+      .get<{ subOrders: SubOrder[] }>(`/orders/vendor/mine${q}`)
       .then((d) => setSubOrders(d.subOrders))
       .finally(() => setLoading(false));
-  }
+  }, [tab]);
 
-  useEffect(load, []);
+  useEffect(load, [load]);
 
   async function updateStatus(id: string, status: string) {
     setBusy(id);
@@ -44,14 +56,36 @@ export function VendorOrders() {
     }
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
-
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Orders</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Orders</h1>
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`badge ${tab === t.key ? 'bg-ink text-white' : 'bg-sand text-ink'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {subOrders.length === 0 ? (
-        <div className="card p-8 text-center text-muted">No orders yet.</div>
+      {tab === 'PENDING' && subOrders.length > 0 && (
+        <div className="rounded-xl bg-gold/15 px-4 py-3 text-sm text-warn">
+          These orders are waiting for a confirmation call. Call the customer, then set the status
+          to CONFIRMED (or CANCELLED if unreachable/fake).
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-muted">Loading…</p>
+      ) : subOrders.length === 0 ? (
+        <div className="card p-8 text-center text-muted">
+          {tab === 'PENDING' ? 'No orders waiting for confirmation. 🎉' : 'No orders here.'}
+        </div>
       ) : (
         <div className="space-y-4">
           {subOrders.map((s) => (
