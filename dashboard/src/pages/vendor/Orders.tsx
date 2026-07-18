@@ -1,8 +1,40 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatTk, formatDate } from '@/lib/format';
 import type { SubOrder } from '@/lib/types';
+
+function printInvoice(s: SubOrder, shopName: string) {
+  const rows = (s.items ?? [])
+    .map(
+      (it) =>
+        `<tr><td>${it.productName}${it.variantLabel ? ` (${it.variantLabel})` : ''}</td><td style="text-align:center">${it.quantity}</td><td style="text-align:right">৳${Number(it.unitPrice)}</td><td style="text-align:right">৳${Number(it.lineTotal)}</td></tr>`,
+    )
+    .join('');
+  const total = Number(s.subtotal) + Number(s.shippingCost);
+  const html = `<!doctype html><html><head><title>Invoice ${s.order?.orderNo ?? ''}</title>
+<style>body{font-family:Arial,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#222}
+h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:16px}
+td,th{border-bottom:1px solid #ddd;padding:8px 4px;font-size:14px;text-align:left}
+.tot td{font-weight:bold;border-top:2px solid #222}.muted{color:#777;font-size:13px}</style></head><body>
+<h1>${shopName} — Invoice</h1>
+<p class="muted">Order ${s.order?.orderNo ?? ''} · ${s.order ? new Date(s.order.createdAt).toLocaleDateString() : ''} · ${s.order?.paymentMethod ?? ''}</p>
+<p><strong>${s.order?.customerName ?? ''}</strong><br/>${s.order?.phone ?? ''}<br/>${s.order?.address ?? ''}, ${s.order?.city ?? ''}</p>
+<table><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr>
+${rows}
+<tr><td colspan="3" style="text-align:right">Subtotal</td><td style="text-align:right">৳${Number(s.subtotal)}</td></tr>
+<tr><td colspan="3" style="text-align:right">Shipping</td><td style="text-align:right">৳${Number(s.shippingCost)}</td></tr>
+<tr class="tot"><td colspan="3" style="text-align:right">Total (${s.order?.paymentMethod === 'COD' ? 'collect on delivery' : 'paid'})</td><td style="text-align:right">৳${total}</td></tr>
+</table>
+<p class="muted">Thank you for shopping with ${shopName} on Boutique BD.</p>
+<script>window.print()</script></body></html>`;
+  const w = window.open('', '_blank', 'width=720,height=900');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+}
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
@@ -16,6 +48,7 @@ const TABS = [
 ];
 
 export function VendorOrders() {
+  const shopName = useAuth((s) => s.user?.shop?.name ?? 'Shop');
   const [subOrders, setSubOrders] = useState<SubOrder[]>([]);
   const [tab, setTab] = useState('PENDING');
   const [loading, setLoading] = useState(true);
@@ -157,6 +190,12 @@ export function VendorOrders() {
                     if (e.target.value !== (s.trackingNo ?? '')) saveTracking(s.id, e.target.value);
                   }}
                 />
+                <button
+                  onClick={() => printInvoice(s, shopName)}
+                  className="btn-ghost btn-sm ml-auto"
+                >
+                  🖨 Invoice
+                </button>
               </div>
             </div>
           ))}

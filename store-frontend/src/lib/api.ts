@@ -127,6 +127,7 @@ export interface CheckoutPayload {
   zone: 'inside_dhaka' | 'outside_dhaka';
   note?: string;
   couponCode?: string;
+  idempotencyKey?: string;
   paymentMethod: 'COD';
   items: Array<{ productId: string; variantId?: string; quantity: number }>;
 }

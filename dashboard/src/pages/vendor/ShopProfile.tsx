@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ImageUploader } from '@/components/ImageUploader';
+import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import type { Shop } from '@/lib/types';
 
 export function ShopProfile() {
@@ -126,6 +127,8 @@ export function ShopProfile() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </form>
+
+      <ChangePasswordCard />
     </div>
   );
 }

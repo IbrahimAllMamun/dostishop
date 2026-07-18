@@ -42,6 +42,13 @@ export default function CheckoutPage() {
       .catch(() => setSettings(null));
   }, []);
 
+  // One key per checkout session — the API ignores duplicate submissions
+  const idempotencyKey = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+
   // Abandoned-checkout capture: once a plausible phone is typed, record the
   // intent (debounced). If the order is placed, the API marks it recovered.
   const intentSent = useRef(false);
@@ -107,6 +114,7 @@ export default function CheckoutPage() {
         zone,
         note: form.note || undefined,
         couponCode: coupon?.code,
+        idempotencyKey: idempotencyKey.current,
         paymentMethod: 'COD',
         items: items.map((i) => ({
           productId: i.productId,

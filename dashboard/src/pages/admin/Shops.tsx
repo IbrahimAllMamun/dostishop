@@ -35,6 +35,20 @@ export function AdminShops() {
     }
   }
 
+  async function resetPassword(shop: Shop) {
+    if (!shop.owner) return;
+    if (!confirm(`Reset the password for ${shop.owner.email}? A temporary password will be generated.`))
+      return;
+    try {
+      const res = await api.post<{ tempPassword: string }>('/auth/admin/reset-password', {
+        userId: shop.owner.id,
+      });
+      prompt('Temporary password (copy and share with the vendor):', res.tempPassword);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -111,6 +125,13 @@ export function AdminShops() {
                           Suspend
                         </button>
                       )}
+                      <button
+                        onClick={() => resetPassword(s)}
+                        className="btn-ghost btn-sm"
+                        title="Generate a temporary password for the owner"
+                      >
+                        Reset pw
+                      </button>
                     </div>
                   </td>
                 </tr>

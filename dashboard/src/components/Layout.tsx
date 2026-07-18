@@ -5,10 +5,13 @@ const adminNav = [
   { to: '/admin', label: 'Overview', end: true },
   { to: '/admin/shops', label: 'Shops' },
   { to: '/admin/categories', label: 'Categories' },
+  { to: '/admin/banners', label: 'Banners' },
   { to: '/admin/coupons', label: 'Coupons' },
   { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/orders', label: 'Orders' },
   { to: '/admin/abandoned', label: 'Abandoned carts' },
+  { to: '/admin/payouts', label: 'Payouts' },
+  { to: '/admin/settings', label: 'Settings' },
 ];
 
 const vendorNav = [
@@ -16,6 +19,7 @@ const vendorNav = [
   { to: '/vendor/products', label: 'Products' },
   { to: '/vendor/orders', label: 'Orders' },
   { to: '/vendor/analytics', label: 'Analytics' },
+  { to: '/vendor/payouts', label: 'Payouts' },
   { to: '/vendor/shop', label: 'Shop profile' },
 ];
 

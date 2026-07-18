@@ -9,6 +9,7 @@ export const checkoutSchema = z.object({
   zone: z.enum(['inside_dhaka', 'outside_dhaka']),
   note: z.string().optional(),
   couponCode: z.string().optional(),
+  idempotencyKey: z.string().max(64).optional(),
   paymentMethod: z.enum(['COD', 'BKASH', 'SSLCOMMERZ']).optional(),
   items: z
     .array(

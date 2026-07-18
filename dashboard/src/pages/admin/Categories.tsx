@@ -44,6 +44,29 @@ export function AdminCategories() {
     }
   }
 
+  async function rename(c: Category) {
+    const name = prompt('Rename category', c.name);
+    if (!name || name.trim() === c.name) return;
+    try {
+      await api.patch(`/categories/${c.id}`, { name: name.trim() });
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  async function move(c: Category, dir: -1 | 1) {
+    const sorted = [...categories];
+    const idx = sorted.findIndex((x) => x.id === c.id);
+    const swap = sorted[idx + dir];
+    if (!swap) return;
+    await Promise.all([
+      api.patch(`/categories/${c.id}`, { sortOrder: swap.sortOrder }),
+      api.patch(`/categories/${swap.id}`, { sortOrder: c.sortOrder }),
+    ]);
+    load();
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Categories</h1>
@@ -68,15 +91,36 @@ export function AdminCategories() {
         {loading ? (
           <p className="p-4 text-muted">Loading…</p>
         ) : (
-          categories.map((c) => (
+          categories.map((c, i) => (
             <div key={c.id} className="flex items-center justify-between px-4 py-3">
               <div>
                 <span className="font-medium">{c.name}</span>
                 <span className="ml-2 text-xs text-muted">/{c.slug}</span>
               </div>
-              <button onClick={() => remove(c.id)} className="text-sm text-muted hover:text-sale">
-                Delete
-              </button>
+              <div className="flex items-center gap-3 text-sm">
+                <button
+                  onClick={() => move(c, -1)}
+                  disabled={i === 0}
+                  className="text-muted hover:text-ink disabled:opacity-30"
+                  aria-label="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => move(c, 1)}
+                  disabled={i === categories.length - 1}
+                  className="text-muted hover:text-ink disabled:opacity-30"
+                  aria-label="Move down"
+                >
+                  ↓
+                </button>
+                <button onClick={() => rename(c)} className="text-primary hover:underline">
+                  Rename
+                </button>
+                <button onClick={() => remove(c.id)} className="text-muted hover:text-sale">
+                  Delete
+                </button>
+              </div>
             </div>
           ))
         )}

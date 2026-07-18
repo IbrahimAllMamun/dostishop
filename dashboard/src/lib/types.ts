@@ -98,6 +98,38 @@ export interface Order {
   subOrders: Array<{ id: string; status: string; shop?: { name: string } }>;
 }
 
+export interface Banner {
+  id: string;
+  imageUrl: string;
+  linkUrl?: string | null;
+  title?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface Settings {
+  id: string;
+  storeName: string;
+  shippingInsideDhaka: Money;
+  shippingOutsideDhaka: Money;
+  supportPhone?: string | null;
+  supportEmail?: string | null;
+}
+
+export interface Payout {
+  id: string;
+  shopId: string;
+  periodFrom: string;
+  periodTo: string;
+  gross: Money;
+  commission: Money;
+  net: Money;
+  status: 'PENDING' | 'PAID';
+  createdAt: string;
+  shop?: { name: string; slug: string };
+  _count?: { subOrders: number };
+}
+
 export interface AbandonedCheckout {
   id: string;
   customerName?: string | null;

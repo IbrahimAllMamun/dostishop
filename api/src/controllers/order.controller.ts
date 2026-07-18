@@ -25,19 +25,45 @@ interface Line {
 // ---- Public: guest checkout ----
 
 export const checkout = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, address, city, zone, note, paymentMethod, items, couponCode } =
-    req.body as {
-      customerName: string;
-      phone: string;
-      email?: string;
-      address: string;
-      city: string;
-      zone: 'inside_dhaka' | 'outside_dhaka';
-      note?: string;
-      paymentMethod?: 'COD' | 'BKASH' | 'SSLCOMMERZ';
-      items: CheckoutItem[];
-      couponCode?: string;
-    };
+  const {
+    customerName,
+    phone,
+    email,
+    address,
+    city,
+    zone,
+    note,
+    paymentMethod,
+    items,
+    couponCode,
+    idempotencyKey,
+  } = req.body as {
+    customerName: string;
+    phone: string;
+    email?: string;
+    address: string;
+    city: string;
+    zone: 'inside_dhaka' | 'outside_dhaka';
+    note?: string;
+    paymentMethod?: 'COD' | 'BKASH' | 'SSLCOMMERZ';
+    items: CheckoutItem[];
+    couponCode?: string;
+    idempotencyKey?: string;
+  };
+
+  // Double-submit guard: same key returns the already-created order
+  if (idempotencyKey) {
+    const existing = await prisma.order.findUnique({
+      where: { idempotencyKey },
+      include: {
+        subOrders: { include: { items: true, shop: { select: { name: true, slug: true } } } },
+      },
+    });
+    if (existing) {
+      res.status(200).json({ message: 'Order already placed', order: existing });
+      return;
+    }
+  }
 
   const setting = await prisma.setting.findFirst();
   const shippingRate =
@@ -97,6 +123,7 @@ export const checkout = asyncHandler(async (req, res) => {
     const created = await tx.order.create({
       data: {
         orderNo,
+        idempotencyKey: idempotencyKey ?? null,
         customerName,
         phone,
         email: email ?? null,
@@ -146,10 +173,15 @@ export const checkout = asyncHandler(async (req, res) => {
         });
 
         if (l.variant) {
-          await tx.productVariant.update({
-            where: { id: l.variant.id },
+          // Conditional decrement: fails (rolls back the order) if a concurrent
+          // checkout took the last units between validation and here.
+          const updated = await tx.productVariant.updateMany({
+            where: { id: l.variant.id, stockQty: { gte: l.quantity } },
             data: { stockQty: { decrement: l.quantity } },
           });
+          if (updated.count === 0) {
+            throw new ApiError(400, `Insufficient stock for "${l.product.name}"`);
+          }
         }
       }
     }

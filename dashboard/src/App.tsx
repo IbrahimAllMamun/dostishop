@@ -10,6 +10,10 @@ import { AdminCategories } from '@/pages/admin/Categories';
 import { AdminCoupons } from '@/pages/admin/Coupons';
 import { AdminReviews } from '@/pages/admin/Reviews';
 import { AdminAbandoned } from '@/pages/admin/Abandoned';
+import { AdminBanners } from '@/pages/admin/Banners';
+import { AdminSettings } from '@/pages/admin/Settings';
+import { AdminPayouts } from '@/pages/admin/Payouts';
+import { VendorPayouts } from '@/pages/vendor/Payouts';
 import { AdminOrders } from '@/pages/admin/Orders';
 import { VendorDashboard } from '@/pages/vendor/Dashboard';
 import { VendorProducts } from '@/pages/vendor/Products';
@@ -45,6 +49,9 @@ export function App() {
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/abandoned" element={<AdminAbandoned />} />
+          <Route path="/admin/banners" element={<AdminBanners />} />
+          <Route path="/admin/payouts" element={<AdminPayouts />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
         </Route>
 
@@ -62,6 +69,7 @@ export function App() {
           <Route path="/vendor/products/:id/edit" element={<ProductForm />} />
           <Route path="/vendor/orders" element={<VendorOrders />} />
           <Route path="/vendor/analytics" element={<VendorAnalytics />} />
+          <Route path="/vendor/payouts" element={<VendorPayouts />} />
           <Route path="/vendor/shop" element={<ShopProfile />} />
         </Route>
 

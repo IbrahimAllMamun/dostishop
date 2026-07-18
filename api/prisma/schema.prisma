@@ -198,8 +198,10 @@ model ProductVariant {
 // One customer checkout = one Order, split into one SubOrder per shop.
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNo       String        @unique
+  id             String        @id @default(cuid())
+  orderNo        String        @unique
+  // Guards against double-submitted checkouts
+  idempotencyKey String?       @unique
   customerName  String
   phone         String
   email         String?
@@ -233,12 +235,16 @@ model SubOrder {
   commissionAmount Decimal       @db.Decimal(10, 2)
   vendorPayout     Decimal       @db.Decimal(10, 2)
   trackingNo       String?
+  // Set once this sub-order is included in a vendor payout
+  payoutId         String?
+  payout           Payout?       @relation(fields: [payoutId], references: [id])
   items            OrderItem[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
   @@index([shopId])
   @@index([orderId])
+  @@index([payoutId])
 }
 
 model OrderItem {
@@ -292,6 +298,7 @@ model Payout {
   commission Decimal      @db.Decimal(10, 2)
   net        Decimal      @db.Decimal(10, 2)
   status     PayoutStatus @default(PENDING)
+  subOrders  SubOrder[]
   createdAt  DateTime     @default(now())
 
   @@index([shopId])

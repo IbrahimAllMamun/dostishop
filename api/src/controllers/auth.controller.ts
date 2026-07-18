@@ -78,6 +78,41 @@ export const logout = asyncHandler(async (_req, res) => {
   res.json({ message: 'Logged out' });
 });
 
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body as {
+    currentPassword: string;
+    newPassword: string;
+  };
+  const user = await prisma.user.findUnique({ where: { id: req.user!.sub } });
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const ok = await comparePassword(currentPassword, user.passwordHash);
+  if (!ok) throw new ApiError(401, 'Current password is incorrect');
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+  res.json({ message: 'Password updated' });
+});
+
+// Admin sets a random temporary password for a locked-out vendor (no email service needed)
+export const adminResetPassword = asyncHandler(async (req, res) => {
+  const { userId } = req.body as { userId: string };
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.role === 'SUPER_ADMIN' && user.id !== req.user!.sub) {
+    throw new ApiError(403, 'Cannot reset another admin’s password');
+  }
+
+  const tempPassword = `Tmp${Math.random().toString(36).slice(2, 8)}${Math.floor(10 + Math.random() * 90)}`;
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(tempPassword) },
+  });
+  res.json({ tempPassword, message: 'Share this with the vendor; they should change it after login.' });
+});
+
 export const me = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.sub },
