@@ -16,8 +16,8 @@ export default {
         muted: '#8A8178',
       },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-bangla)', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'var(--font-bangla)', 'system-ui', 'sans-serif'],
       },
       maxWidth: {
         content: '1200px',

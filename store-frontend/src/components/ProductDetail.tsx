@@ -7,6 +7,7 @@ import type { Product, Variant } from '@/lib/types';
 import { formatTk, toNumber } from '@/lib/format';
 import { useCart } from '@/store/cart';
 import { Stars } from './Stars';
+import { useT } from '@/i18n/I18nProvider';
 
 function variantLabel(v: Variant): string {
   return [v.size, v.color].filter(Boolean).join(' / ') || v.sku || 'Default';
@@ -14,6 +15,7 @@ function variantLabel(v: Variant): string {
 
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
+  const t = useT();
   const add = useCart((s) => s.add);
 
   const variants = product.variants ?? [];
@@ -105,7 +107,11 @@ export function ProductDetail({ product }: { product: Product }) {
               </span>
             </a>
           )}
-          {product.brand && <p className="text-sm text-muted">Brand: {product.brand}</p>}
+          {product.brand && (
+            <p className="text-sm text-muted">
+              {t('product.brand')}: {product.brand}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -122,7 +128,7 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Variants */}
         {variants.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Options</p>
+            <p className="text-sm font-medium">{t('product.options')}</p>
             <div className="flex flex-wrap gap-2">
               {variants.map((v) => {
                 const selected = variant?.id === v.id;
@@ -167,7 +173,9 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
           {variant && (
             <span className="text-sm text-muted">
-              {variant.stockQty > 0 ? `${variant.stockQty} in stock` : 'Out of stock'}
+              {variant.stockQty > 0
+                ? `${variant.stockQty} ${t('product.inStock')}`
+                : t('product.outOfStock')}
             </span>
           )}
         </div>
@@ -175,15 +183,15 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Actions */}
         <div className="flex flex-wrap gap-3 pt-2">
           <button onClick={addToCart} disabled={outOfStock} className="btn-outline">
-            {added ? 'Added ✓' : 'Add to cart'}
+            {added ? t('product.added') : t('product.addToCart')}
           </button>
           <button onClick={buyNow} disabled={outOfStock} className="btn-primary">
-            Buy now
+            {t('product.buyNow')}
           </button>
         </div>
 
         <div className="rounded-2xl bg-sand/60 p-4 text-sm text-ink/70">
-          🚚 Cash on delivery available · Ships in 2–5 days across Bangladesh
+          {t('product.codBanner')}
         </div>
       </div>
     </div>

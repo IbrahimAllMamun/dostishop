@@ -34,8 +34,42 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   } catch {
     notFound();
   }
+
+  // Structured data for Google rich results (price, stars)
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  const price = Number(product.salePrice ?? product.basePrice);
+  const inStock = (product.variants ?? []).length === 0 || product.variants!.some((v) => v.stockQty > 0);
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description ?? undefined,
+    image: product.images?.map((i) => i.url),
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    offers: {
+      '@type': 'Offer',
+      url: `${site}/product/${product.slug}`,
+      priceCurrency: 'BDT',
+      price: price.toFixed(2),
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    ...(Number(product.ratingCount ?? 0) > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(product.ratingAvg).toFixed(1),
+            reviewCount: product.ratingCount,
+          },
+        }
+      : {}),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ProductDetail product={product} />
       <ReviewsSection productId={product.id} />
     </>

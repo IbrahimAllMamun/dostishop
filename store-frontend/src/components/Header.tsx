@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { CartButton } from './CartButton';
 import { SearchBar } from './SearchBar';
+import { LanguageToggle } from './LanguageToggle';
+import { getT } from '@/i18n/server';
 
-export function Header() {
+export async function Header() {
+  const t = await getT();
   return (
     <header className="sticky top-0 z-40 border-b border-ink/10 bg-canvas/90 backdrop-blur">
       <div className="container-x flex items-center gap-4 py-4">
@@ -14,13 +17,14 @@ export function Header() {
           <SearchBar />
         </div>
 
-        <nav className="ml-auto flex items-center gap-5 text-sm">
+        <nav className="ml-auto flex items-center gap-4 text-sm">
           <Link href="/products" className="hidden text-ink hover:text-primary sm:inline">
-            Shop
+            {t('nav.shop')}
           </Link>
           <Link href="/track" className="hidden text-ink hover:text-primary sm:inline">
-            Track order
+            {t('nav.track')}
           </Link>
+          <LanguageToggle />
           <CartButton />
         </nav>
       </div>

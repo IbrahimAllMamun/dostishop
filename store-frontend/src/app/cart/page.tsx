@@ -4,8 +4,10 @@ import Image from 'next/image';
 import { useCart, cartKey } from '@/store/cart';
 import { formatTk } from '@/lib/format';
 import { useHasHydrated } from '@/lib/useHasHydrated';
+import { useT } from '@/i18n/I18nProvider';
 
 export default function CartPage() {
+  const t = useT();
   const hydrated = useHasHydrated();
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
@@ -20,10 +22,10 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="container-x py-20 text-center">
-        <h1 className="font-display text-3xl font-bold">Your cart is empty</h1>
-        <p className="mt-2 text-muted">Find something you love.</p>
+        <h1 className="font-display text-3xl font-bold">{t('cart.empty')}</h1>
+        <p className="mt-2 text-muted">{t('cart.findSomething')}</p>
         <Link href="/products" className="btn-primary mt-6">
-          Start shopping
+          {t('cart.startShopping')}
         </Link>
       </div>
     );
@@ -32,7 +34,7 @@ export default function CartPage() {
   return (
     <div className="container-x grid gap-8 py-8 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
-        <h1 className="font-display text-3xl font-bold">Cart</h1>
+        <h1 className="font-display text-3xl font-bold">{t('cart.title')}</h1>
         {items.map((i) => {
           const k = cartKey(i);
           return (
@@ -56,7 +58,7 @@ export default function CartPage() {
                     className="text-sm text-muted hover:text-sale"
                     aria-label="Remove item"
                   >
-                    Remove
+                    {t('cart.remove')}
                   </button>
                 </div>
                 <div className="mt-auto flex items-center justify-between">
@@ -80,20 +82,20 @@ export default function CartPage() {
       {/* Summary */}
       <div className="lg:col-span-1">
         <div className="card sticky top-28 space-y-4 p-6">
-          <h2 className="font-display text-xl font-semibold">Order summary</h2>
+          <h2 className="font-display text-xl font-semibold">{t('cart.summary')}</h2>
           <div className="flex justify-between text-sm">
-            <span className="text-muted">Subtotal</span>
+            <span className="text-muted">{t('cart.subtotal')}</span>
             <span className="font-medium">{formatTk(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted">Shipping</span>
-            <span className="text-muted">Calculated at checkout</span>
+            <span className="text-muted">{t('cart.shipping')}</span>
+            <span className="text-muted">{t('cart.shippingAtCheckout')}</span>
           </div>
           <Link href="/checkout" className="btn-primary w-full">
-            Checkout
+            {t('cart.checkout')}
           </Link>
           <Link href="/products" className="block text-center text-sm text-primary hover:underline">
-            Continue shopping
+            {t('cart.continue')}
           </Link>
         </div>
       </div>

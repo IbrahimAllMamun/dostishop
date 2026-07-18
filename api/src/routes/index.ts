@@ -9,6 +9,7 @@ import { uploadRouter } from './upload.routes';
 import { couponRouter } from './coupon.routes';
 import { reviewRouter } from './review.routes';
 import { vendorAnalytics } from '../controllers/analytics.controller';
+import { facebookFeed } from '../controllers/feed.controller';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 
@@ -23,5 +24,6 @@ router.use('/uploads', uploadRouter);
 router.use('/coupons', couponRouter);
 router.use('/reviews', reviewRouter);
 router.get('/analytics/vendor', authenticate, authorize('VENDOR'), vendorAnalytics);
+router.get('/feed/facebook.csv', facebookFeed);
 router.get('/banners', listBanners);
 router.get('/settings', getPublicSettings);

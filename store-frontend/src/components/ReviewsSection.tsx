@@ -1,8 +1,10 @@
 import { getProductReviews } from '@/lib/api';
 import { Stars } from './Stars';
 import { ReviewForm } from './ReviewForm';
+import { getT } from '@/i18n/server';
 
 export async function ReviewsSection({ productId }: { productId: string }) {
+  const t = await getT();
   const { reviews, stats } = await getProductReviews(productId).catch(() => ({
     reviews: [],
     stats: { avg: 0, count: 0, distribution: {} as Record<number, number> },
@@ -10,7 +12,7 @@ export async function ReviewsSection({ productId }: { productId: string }) {
 
   return (
     <section className="container-x space-y-6 py-10" id="reviews">
-      <h2 className="font-display text-2xl font-semibold">Customer reviews</h2>
+      <h2 className="font-display text-2xl font-semibold">{t('product.reviews')}</h2>
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Summary */}
@@ -42,7 +44,7 @@ export async function ReviewsSection({ productId }: { productId: string }) {
               </div>
             </>
           ) : (
-            <p className="text-muted">No reviews yet — be the first to review this product.</p>
+            <p className="text-muted">{t('product.noReviews')}</p>
           )}
           <ReviewForm productId={productId} />
         </div>
@@ -56,7 +58,7 @@ export async function ReviewsSection({ productId }: { productId: string }) {
                 <span className="font-medium">{r.customerName}</span>
                 {r.isVerified && (
                   <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
-                    ✓ Verified purchase
+                    {t('product.verified')}
                   </span>
                 )}
                 <span className="ml-auto text-xs text-muted">

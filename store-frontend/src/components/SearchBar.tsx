@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSuggestions, type Suggestion } from '@/lib/api';
 import { formatTk } from '@/lib/format';
+import { useT } from '@/i18n/I18nProvider';
 
 export function SearchBar() {
+  const t = useT();
   const router = useRouter();
   const boxRef = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState('');
@@ -54,7 +56,7 @@ export function SearchBar() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => suggestions.length && setOpen(true)}
-          placeholder="Search bags, jewelry, cosmetics…"
+          placeholder={t('nav.searchPlaceholder')}
           className="input py-2.5"
           aria-label="Search products"
         />

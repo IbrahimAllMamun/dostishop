@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import { Fraunces, Inter } from 'next/font/google';
+import { Fraunces, Hind_Siliguri, Inter } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { I18nProvider } from '@/i18n/I18nProvider';
+import { getLocale } from '@/i18n/server';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -18,6 +20,13 @@ const sans = Inter({
   display: 'swap',
 });
 
+const bangla = Hind_Siliguri({
+  subsets: ['bengali'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-bangla',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: {
     default: 'Boutique BD — Bags, Jewelry, Cosmetics & More',
@@ -27,14 +36,17 @@ export const metadata: Metadata = {
     'Shop backpacks, purses, imitation jewelry, cosmetics, clothing and footwear from trusted local shops. Cash on delivery across Bangladesh.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html lang={locale} className={`${display.variable} ${sans.variable} ${bangla.variable}`}>
       <body className="flex min-h-screen flex-col font-sans antialiased">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppButton />
+        <I18nProvider locale={locale}>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <WhatsAppButton />
+        </I18nProvider>
       </body>
     </html>
   );

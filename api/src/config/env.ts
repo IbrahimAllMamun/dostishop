@@ -12,6 +12,8 @@ const envSchema = z.object({
   COOKIE_SECURE: z.coerce.boolean().default(false),
   // Public base URL of this API — used to build absolute URLs for locally-stored uploads
   API_PUBLIC_URL: z.string().default('http://localhost:4000'),
+  // Public storefront URL — used in the Facebook catalog feed product links
+  STORE_PUBLIC_URL: z.string().default('http://localhost:3000'),
   // Optional Cloudinary — when set, uploads go to Cloudinary instead of local disk
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),

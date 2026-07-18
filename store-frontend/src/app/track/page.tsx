@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { trackOrder } from '@/lib/api';
 import { formatTk } from '@/lib/format';
+import { useT } from '@/i18n/I18nProvider';
 import type { Order } from '@/lib/types';
 
 const STATUS_STEPS = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
@@ -14,6 +15,7 @@ function statusColor(status: string): string {
 }
 
 function TrackInner() {
+  const t = useT();
   const params = useSearchParams();
   const [orderNo, setOrderNo] = useState(params.get('orderNo') ?? '');
   const [phone, setPhone] = useState('');
@@ -44,13 +46,13 @@ function TrackInner() {
   return (
     <div className="container-x max-w-2xl space-y-6 py-10">
       <div>
-        <h1 className="font-display text-3xl font-bold">Track your order</h1>
-        <p className="mt-1 text-muted">Enter your order number and the phone number you used.</p>
+        <h1 className="font-display text-3xl font-bold">{t('track.title')}</h1>
+        <p className="mt-1 text-muted">{t('track.subtitle')}</p>
       </div>
 
       <form onSubmit={submit} className="card space-y-4 p-6">
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Order number</span>
+          <span className="text-sm font-medium">{t('track.orderNo')}</span>
           <input
             required
             className="input"
@@ -60,7 +62,7 @@ function TrackInner() {
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Phone</span>
+          <span className="text-sm font-medium">{t('track.phone')}</span>
           <input
             required
             className="input"
@@ -70,7 +72,7 @@ function TrackInner() {
           />
         </label>
         <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? 'Searching…' : 'Track order'}
+          {loading ? t('track.searching') : t('track.btn')}
         </button>
         {error && <p className="text-sm text-sale">{error}</p>}
       </form>

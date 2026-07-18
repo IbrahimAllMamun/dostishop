@@ -2,8 +2,10 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { postReview, uploadReviewPhoto } from '@/lib/api';
+import { useT } from '@/i18n/I18nProvider';
 
 export function ReviewForm({ productId }: { productId: string }) {
+  const t = useT();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -75,7 +77,7 @@ export function ReviewForm({ productId }: { productId: string }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-outline">
-        Write a review
+        {t('product.writeReview')}
       </button>
     );
   }
