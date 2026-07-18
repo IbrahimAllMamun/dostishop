@@ -291,6 +291,15 @@ model Payout {
   @@index([shopId])
 }
 
+model SearchQuery {
+  id        String   @id @default(cuid())
+  term      String
+  results   Int
+  createdAt DateTime @default(now())
+
+  @@index([term])
+}
+
 model Setting {
   id                   String   @id @default(cuid())
   storeName            String   @default("Marketplace")

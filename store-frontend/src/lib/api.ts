@@ -43,6 +43,13 @@ export interface ProductListParams {
   featured?: boolean;
   sort?: string;
   page?: number;
+  minPrice?: string;
+  maxPrice?: string;
+  brand?: string;
+  size?: string;
+  color?: string;
+  inStock?: string;
+  minRating?: string;
 }
 
 export async function getProducts(
@@ -55,7 +62,44 @@ export async function getProducts(
   if (params.featured) q.set('featured', 'true');
   if (params.sort) q.set('sort', params.sort);
   if (params.page) q.set('page', String(params.page));
+  if (params.minPrice) q.set('minPrice', params.minPrice);
+  if (params.maxPrice) q.set('maxPrice', params.maxPrice);
+  if (params.brand) q.set('brand', params.brand);
+  if (params.size) q.set('size', params.size);
+  if (params.color) q.set('color', params.color);
+  if (params.inStock) q.set('inStock', params.inStock);
+  if (params.minRating) q.set('minRating', params.minRating);
   return api<{ products: Product[]; pagination: Pagination }>(`/products?${q.toString()}`);
+}
+
+export interface Facets {
+  brands: string[];
+  sizes: string[];
+  colors: string[];
+  priceMin: number;
+  priceMax: number;
+}
+
+export async function getFacets(category?: string, shop?: string): Promise<Facets> {
+  const q = new URLSearchParams();
+  if (category) q.set('category', category);
+  if (shop) q.set('shop', shop);
+  return api<Facets>(`/products/facets?${q.toString()}`);
+}
+
+export interface Suggestion {
+  id: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  price: number;
+}
+
+export async function getSuggestions(q: string): Promise<Suggestion[]> {
+  const res = await fetch(`${API_BASE}/products/suggest?q=${encodeURIComponent(q)}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.suggestions as Suggestion[];
 }
 
 export async function getProduct(slug: string): Promise<Product> {

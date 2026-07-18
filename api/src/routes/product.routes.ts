@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   listProducts,
   getProductBySlug,
+  getFacets,
+  suggestProducts,
   listMyProducts,
   getMyProduct,
   createProduct,
@@ -30,4 +32,6 @@ productRouter.delete('/:id', authenticate, authorize('VENDOR'), deleteProduct);
 
 // Public
 productRouter.get('/', listProducts);
+productRouter.get('/facets', getFacets);
+productRouter.get('/suggest', suggestProducts);
 productRouter.get('/slug/:slug', getProductBySlug);

@@ -6,6 +6,33 @@ import { Prisma } from '@prisma/client';
 
 // ---- Public ----
 
+const productListInclude = {
+  images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
+  shop: { select: { name: true, slug: true } },
+  category: { select: { name: true, slug: true } },
+};
+
+/** Typo-tolerant search over name + brand; returns ids ranked by relevance.
+ *  word_similarity matches the query against the best-matching part of the name,
+ *  so "bakpack" still finds "Urban Travel Backpack". */
+async function searchProductIds(term: string): Promise<string[]> {
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Product"
+    WHERE "isActive" = true AND (
+      "name" ILIKE '%' || ${term} || '%'
+      OR coalesce("brand", '') ILIKE '%' || ${term} || '%'
+      OR word_similarity(${term}, "name") > 0.35
+      OR word_similarity(${term}, coalesce("brand", '')) > 0.35
+    )
+    ORDER BY GREATEST(
+      word_similarity(${term}, "name"),
+      similarity("name", ${term}),
+      word_similarity(${term}, coalesce("brand", ''))
+    ) DESC
+    LIMIT 200`;
+  return rows.map((r) => r.id);
+}
+
 export const listProducts = asyncHandler(async (req, res) => {
   const {
     category,
@@ -15,6 +42,13 @@ export const listProducts = asyncHandler(async (req, res) => {
     sort,
     page = '1',
     limit = '20',
+    minPrice,
+    maxPrice,
+    brand,
+    size,
+    color,
+    inStock,
+    minRating,
   } = req.query as Record<string, string>;
 
   const take = Math.min(parseInt(limit, 10) || 20, 60);
@@ -25,31 +59,123 @@ export const listProducts = asyncHandler(async (req, res) => {
   if (category) where.category = { slug: category };
   if (shop) where.shop = { slug: shop, status: 'ACTIVE' };
   if (featured === 'true') where.isFeatured = true;
-  if (search) where.name = { contains: search, mode: 'insensitive' };
+  if (brand) where.brand = { in: brand.split(',') };
+  if (minRating) where.ratingAvg = { gte: Number(minRating) };
 
-  let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
+  // Effective price = salePrice ?? basePrice
+  if (minPrice || maxPrice) {
+    const gte = minPrice ? Number(minPrice) : undefined;
+    const lte = maxPrice ? Number(maxPrice) : undefined;
+    where.OR = [
+      { salePrice: { not: null, gte, lte } },
+      { salePrice: null, basePrice: { gte, lte } },
+    ];
+  }
+
+  // Variant-level facets
+  const variantFilter: Prisma.ProductVariantWhereInput = {};
+  if (size) variantFilter.size = { in: size.split(',') };
+  if (color) variantFilter.color = { in: color.split(',') };
+  if (inStock === 'true') variantFilter.stockQty = { gt: 0 };
+  if (Object.keys(variantFilter).length) where.variants = { some: variantFilter };
+
+  // Typo-tolerant search (pg_trgm), ranked by similarity
+  let rankedIds: string[] | null = null;
+  if (search) {
+    rankedIds = await searchProductIds(search);
+    where.id = { in: rankedIds };
+  }
+
+  let orderBy: Prisma.ProductOrderByWithRelationInput | undefined = { createdAt: 'desc' };
   if (sort === 'price_asc') orderBy = { basePrice: 'asc' };
   if (sort === 'price_desc') orderBy = { basePrice: 'desc' };
   if (sort === 'rating') orderBy = { ratingAvg: 'desc' };
+  const useRelevance = rankedIds !== null && !sort;
 
-  const [products, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy,
-      take,
-      skip,
-      include: {
-        images: { orderBy: { sortOrder: 'asc' }, take: 1 },
-        shop: { select: { name: true, slug: true } },
-        category: { select: { name: true, slug: true } },
-      },
-    }),
-    prisma.product.count({ where }),
-  ]);
+  let products;
+  let total: number;
+
+  if (useRelevance) {
+    // Fetch all matches (capped at 200 upstream), order by search rank, paginate in memory
+    const all = await prisma.product.findMany({ where, include: productListInclude });
+    const rank = new Map(rankedIds!.map((id, i) => [id, i]));
+    all.sort((a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999));
+    total = all.length;
+    products = all.slice(skip, skip + take);
+  } else {
+    [products, total] = await Promise.all([
+      prisma.product.findMany({ where, orderBy, take, skip, include: productListInclude }),
+      prisma.product.count({ where }),
+    ]);
+  }
+
+  // Log searches for merchandising insight (fire-and-forget)
+  if (search) {
+    prisma.searchQuery.create({ data: { term: search, results: total } }).catch(() => {});
+  }
 
   res.json({
     products,
     pagination: { page: currentPage, limit: take, total, pages: Math.ceil(total / take) },
+  });
+});
+
+/** Facet options (brands, sizes, colors, price range) for the current scope. */
+export const getFacets = asyncHandler(async (req, res) => {
+  const { category, shop } = req.query as Record<string, string>;
+  const where: Prisma.ProductWhereInput = { isActive: true, shop: { status: 'ACTIVE' } };
+  if (category) where.category = { slug: category };
+  if (shop) where.shop = { slug: shop, status: 'ACTIVE' };
+
+  const [brandRows, variantRows, priceAgg] = await Promise.all([
+    prisma.product.findMany({ where, distinct: ['brand'], select: { brand: true } }),
+    prisma.productVariant.findMany({
+      where: { product: where },
+      distinct: ['size', 'color'],
+      select: { size: true, color: true },
+    }),
+    prisma.product.aggregate({ where, _min: { basePrice: true }, _max: { basePrice: true } }),
+  ]);
+
+  const brands = [...new Set(brandRows.map((b) => b.brand).filter(Boolean))] as string[];
+  const sizes = [...new Set(variantRows.map((v) => v.size).filter(Boolean))] as string[];
+  const colors = [...new Set(variantRows.map((v) => v.color).filter(Boolean))] as string[];
+
+  res.json({
+    brands: brands.sort(),
+    sizes: sizes.sort(),
+    colors: colors.sort(),
+    priceMin: Number(priceAgg._min.basePrice ?? 0),
+    priceMax: Number(priceAgg._max.basePrice ?? 0),
+  });
+});
+
+/** Autocomplete: top matches with thumbnail + price. */
+export const suggestProducts = asyncHandler(async (req, res) => {
+  const q = ((req.query.q as string) ?? '').trim();
+  if (q.length < 2) {
+    res.json({ suggestions: [] });
+    return;
+  }
+  const ids = (await searchProductIds(q)).slice(0, 6);
+  if (!ids.length) {
+    res.json({ suggestions: [] });
+    return;
+  }
+  const rows = await prisma.product.findMany({
+    where: { id: { in: ids }, shop: { status: 'ACTIVE' } },
+    include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } },
+  });
+  const rank = new Map(ids.map((id, i) => [id, i]));
+  rows.sort((a, b) => (rank.get(a.id) ?? 9) - (rank.get(b.id) ?? 9));
+  res.json({
+    suggestions: rows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      image: p.images[0]?.url ?? null,
+      price: Number(p.salePrice ?? p.basePrice),
+    })),
   });
 });
 

@@ -1,13 +1,16 @@
 import Link from 'next/link';
-import { getCategories, getProducts } from '@/lib/api';
+import { Suspense } from 'react';
+import { getCategories, getFacets, getProducts } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
+import { Filters } from '@/components/Filters';
 
 export const metadata = { title: 'Shop all' };
 
 const SORTS = [
   { key: '', label: 'Newest' },
-  { key: 'price_asc', label: 'Price: low to high' },
-  { key: 'price_desc', label: 'Price: high to low' },
+  { key: 'rating', label: 'Top rated' },
+  { key: 'price_asc', label: 'Price ↑' },
+  { key: 'price_desc', label: 'Price ↓' },
 ];
 
 type SP = Record<string, string | undefined>;
@@ -26,9 +29,28 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const page = sp.page ? Number(sp.page) : 1;
 
-  const [data, categories] = await Promise.all([
-    getProducts({ category: sp.category, search: sp.search, sort: sp.sort, page }),
+  const [data, categories, facets] = await Promise.all([
+    getProducts({
+      category: sp.category,
+      search: sp.search,
+      sort: sp.sort,
+      page,
+      minPrice: sp.minPrice,
+      maxPrice: sp.maxPrice,
+      brand: sp.brand,
+      size: sp.size,
+      color: sp.color,
+      inStock: sp.inStock,
+      minRating: sp.minRating,
+    }),
     getCategories().catch(() => []),
+    getFacets(sp.category).catch(() => ({
+      brands: [],
+      sizes: [],
+      colors: [],
+      priceMin: 0,
+      priceMax: 0,
+    })),
   ]);
 
   const { products, pagination } = data;
@@ -65,7 +87,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      {/* Category filter pills */}
+      {/* Category pills */}
       <div className="flex flex-wrap gap-2">
         <Link
           href={buildQuery(sp, { category: undefined, page: undefined })}
@@ -88,35 +110,47 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      {/* Grid */}
-      {products.length === 0 ? (
-        <div className="card p-12 text-center text-muted">No products found.</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      )}
+      <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
+        {/* Filters */}
+        <Suspense fallback={<div className="text-sm text-muted">Loading filters…</div>}>
+          <Filters facets={facets} />
+        </Suspense>
 
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-4">
-          {page > 1 && (
-            <Link href={buildQuery(sp, { page: String(page - 1) })} className="btn-outline py-2">
-              Previous
-            </Link>
+        {/* Grid */}
+        <div className="space-y-8">
+          {products.length === 0 ? (
+            <div className="card p-12 text-center text-muted">
+              <p className="font-medium text-ink">No products found.</p>
+              <p className="mt-1 text-sm">Try different keywords or clear some filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           )}
-          <span className="text-sm text-muted">
-            Page {pagination.page} of {pagination.pages}
-          </span>
-          {page < pagination.pages && (
-            <Link href={buildQuery(sp, { page: String(page + 1) })} className="btn-outline py-2">
-              Next
-            </Link>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-center gap-3">
+              {page > 1 && (
+                <Link href={buildQuery(sp, { page: String(page - 1) })} className="btn-outline py-2">
+                  Previous
+                </Link>
+              )}
+              <span className="text-sm text-muted">
+                Page {pagination.page} of {pagination.pages}
+              </span>
+              {page < pagination.pages && (
+                <Link href={buildQuery(sp, { page: String(page + 1) })} className="btn-outline py-2">
+                  Next
+                </Link>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
