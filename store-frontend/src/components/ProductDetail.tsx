@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Product, Variant } from '@/lib/types';
 import { formatTk, toNumber } from '@/lib/format';
 import { useCart } from '@/store/cart';
+import { Stars } from './Stars';
 
 function variantLabel(v: Variant): string {
   return [v.size, v.color].filter(Boolean).join(' / ') || v.sku || 'Default';
@@ -95,6 +96,15 @@ export function ProductDetail({ product }: { product: Product }) {
             </Link>
           )}
           <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{product.name}</h1>
+          {(product.ratingCount ?? 0) > 0 && (
+            <a href="#reviews" className="flex items-center gap-2 text-sm hover:underline">
+              <Stars value={toNumber(product.ratingAvg)} />
+              <span className="text-muted">
+                {toNumber(product.ratingAvg).toFixed(1)} · {product.ratingCount} review
+                {(product.ratingCount ?? 0) > 1 ? 's' : ''}
+              </span>
+            </a>
+          )}
           {product.brand && <p className="text-sm text-muted">Brand: {product.brand}</p>}
         </div>
 

@@ -1,4 +1,14 @@
-import type { Banner, Category, Order, Pagination, Product, Settings, Shop } from './types';
+import type {
+  Banner,
+  Category,
+  Order,
+  Pagination,
+  Product,
+  Review,
+  ReviewStats,
+  Settings,
+  Shop,
+} from './types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
@@ -100,6 +110,44 @@ export async function postCheckout(payload: CheckoutPayload): Promise<Order> {
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error ?? 'Checkout failed');
   return data.order as Order;
+}
+
+export async function getProductReviews(
+  productId: string,
+): Promise<{ reviews: Review[]; stats: ReviewStats }> {
+  return api<{ reviews: Review[]; stats: ReviewStats }>(`/reviews/product/${productId}`);
+}
+
+export interface ReviewPayload {
+  productId: string;
+  rating: number;
+  comment?: string;
+  customerName: string;
+  phone: string;
+  orderNo?: string;
+  photos?: string[];
+}
+
+export async function postReview(
+  payload: ReviewPayload,
+): Promise<{ message: string; isVerified: boolean }> {
+  const res = await fetch(`${API_BASE}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error ?? 'Failed to submit review');
+  return data;
+}
+
+export async function uploadReviewPhoto(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${API_BASE}/uploads/review`, { method: 'POST', body: fd });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error ?? 'Upload failed');
+  return data.url as string;
 }
 
 export async function trackOrder(orderNo: string, phone: string): Promise<Order> {

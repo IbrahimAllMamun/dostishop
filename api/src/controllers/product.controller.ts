@@ -30,6 +30,7 @@ export const listProducts = asyncHandler(async (req, res) => {
   let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
   if (sort === 'price_asc') orderBy = { basePrice: 'asc' };
   if (sort === 'price_desc') orderBy = { basePrice: 'desc' };
+  if (sort === 'rating') orderBy = { ratingAvg: 'desc' };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({

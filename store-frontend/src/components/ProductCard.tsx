@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/lib/types';
 import { formatTk, toNumber } from '@/lib/format';
+import { Stars } from './Stars';
 
 export function ProductCard({ product }: { product: Product }) {
   const img = product.images?.[0]?.url;
@@ -31,6 +32,12 @@ export function ProductCard({ product }: { product: Product }) {
           <p className="text-xs uppercase tracking-wide text-muted">{product.shop.name}</p>
         )}
         <h3 className="line-clamp-1 text-sm font-medium text-ink">{product.name}</h3>
+        {(product.ratingCount ?? 0) > 0 && (
+          <p className="flex items-center gap-1 text-xs">
+            <Stars value={toNumber(product.ratingAvg)} />
+            <span className="text-muted">({product.ratingCount})</span>
+          </p>
+        )}
         <div className="flex items-center gap-2">
           <span className="font-semibold text-ink">
             {formatTk(hasSale ? product.salePrice : product.basePrice)}

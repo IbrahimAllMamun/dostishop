@@ -98,6 +98,20 @@ export interface Order {
   subOrders: Array<{ id: string; status: string; shop?: { name: string } }>;
 }
 
+export interface Review {
+  id: string;
+  customerName: string;
+  phone: string;
+  rating: number;
+  comment?: string | null;
+  orderNo?: string | null;
+  isVerified: boolean;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+  photos: Array<{ id: string; url: string }>;
+  product?: { name: string; slug: string };
+}
+
 export interface Coupon {
   id: string;
   code: string;

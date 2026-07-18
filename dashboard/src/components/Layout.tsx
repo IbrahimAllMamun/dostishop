@@ -6,6 +6,7 @@ const adminNav = [
   { to: '/admin/shops', label: 'Shops' },
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/coupons', label: 'Coupons' },
+  { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/orders', label: 'Orders' },
 ];
 

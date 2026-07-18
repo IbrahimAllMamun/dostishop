@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getProduct } from '@/lib/api';
 import { ProductDetail } from '@/components/ProductDetail';
+import { ReviewsSection } from '@/components/ReviewsSection';
 
 export async function generateMetadata({
   params,
@@ -27,10 +28,16 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  let product;
   try {
-    const product = await getProduct(slug);
-    return <ProductDetail product={product} />;
+    product = await getProduct(slug);
   } catch {
     notFound();
   }
+  return (
+    <>
+      <ProductDetail product={product} />
+      <ReviewsSection productId={product.id} />
+    </>
+  );
 }

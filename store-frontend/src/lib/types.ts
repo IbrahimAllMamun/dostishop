@@ -42,10 +42,28 @@ export interface Product {
   basePrice: Money;
   salePrice?: Money | null;
   isFeatured: boolean;
+  ratingAvg?: Money;
+  ratingCount?: number;
   images: ProductImage[];
   variants?: Variant[];
   shop?: { name: string; slug: string } | null;
   category?: { name: string; slug: string } | null;
+}
+
+export interface Review {
+  id: string;
+  customerName: string;
+  rating: number;
+  comment?: string | null;
+  isVerified: boolean;
+  createdAt: string;
+  photos: Array<{ url: string }>;
+}
+
+export interface ReviewStats {
+  avg: number;
+  count: number;
+  distribution: Record<number, number>;
 }
 
 export interface Banner {
