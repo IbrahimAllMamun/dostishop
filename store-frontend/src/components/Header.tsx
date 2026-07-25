@@ -2,14 +2,19 @@ import Link from 'next/link';
 import { CartButton } from './CartButton';
 import { SearchBar } from './SearchBar';
 import { LanguageToggle } from './LanguageToggle';
+import { MenuDrawer } from './MenuDrawer';
+import { getCategories } from '@/lib/api';
 import { getT } from '@/i18n/server';
 
 export async function Header() {
-  const t = await getT();
+  const [t, categories] = await Promise.all([getT(), getCategories().catch(() => [])]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-ink/10 bg-canvas/90 backdrop-blur">
-      <div className="container-x flex items-center gap-4 py-4">
-        <Link href="/" className="font-display text-2xl font-bold text-ink">
+      <div className="container-x flex items-center gap-2 py-3 sm:gap-4">
+        <MenuDrawer categories={categories} />
+
+        <Link href="/" className="font-display text-xl font-bold text-ink sm:text-2xl">
           Boutique<span className="text-primary">BD</span>
         </Link>
 
@@ -17,14 +22,16 @@ export async function Header() {
           <SearchBar />
         </div>
 
-        <nav className="ml-auto flex items-center gap-4 text-sm">
-          <Link href="/products" className="hidden text-ink hover:text-primary sm:inline">
+        <nav className="ml-auto flex items-center gap-3 text-sm sm:gap-4">
+          <Link href="/products" className="hidden text-ink hover:text-primary md:inline">
             {t('nav.shop')}
           </Link>
-          <Link href="/track" className="hidden text-ink hover:text-primary sm:inline">
+          <Link href="/track" className="hidden text-ink hover:text-primary md:inline">
             {t('nav.track')}
           </Link>
-          <LanguageToggle />
+          <span className="hidden sm:inline-flex">
+            <LanguageToggle />
+          </span>
           <CartButton />
         </nav>
       </div>

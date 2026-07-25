@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  // Expose both prefixes: VITE_ (Vite convention) and NEXT_PUBLIC_ (used in Vercel setup)
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   server: {
     port: 5174,
   },

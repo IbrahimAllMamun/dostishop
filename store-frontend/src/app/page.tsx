@@ -51,20 +51,22 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* Categories */}
+      {/* Categories (top-level only) */}
       {categories.length > 0 && (
         <section className="space-y-5">
           <h2 className="font-display text-2xl font-semibold">{t('home.shopByCategory')}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {categories.map((c) => (
-              <Link
-                key={c.id}
-                href={`/products?category=${c.slug}`}
-                className="card p-5 text-center transition hover:ring-primary/40"
-              >
-                <span className="text-sm font-medium">{c.name}</span>
-              </Link>
-            ))}
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-6">
+            {categories
+              .filter((c) => !c.parentId)
+              .map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/products?category=${c.slug}`}
+                  className="card px-2 py-4 text-center transition hover:ring-primary/40"
+                >
+                  <span className="text-xs font-medium sm:text-sm">{c.name}</span>
+                </Link>
+              ))}
           </div>
         </section>
       )}
@@ -78,8 +80,8 @@ export default async function HomePage() {
               {t('home.viewAll')}
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {featured.products.map((p) => (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {featured.products.slice(0, 10).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
@@ -90,8 +92,8 @@ export default async function HomePage() {
       {latest.products.length > 0 && (
         <section className="space-y-5">
           <h2 className="font-display text-2xl font-semibold">{t('home.newArrivals')}</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {latest.products.slice(0, 8).map((p) => (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {latest.products.slice(0, 10).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>

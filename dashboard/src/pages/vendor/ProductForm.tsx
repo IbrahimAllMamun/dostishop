@@ -37,9 +37,39 @@ export function ProductForm() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([{ ...emptyVariant }]);
 
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatParent, setNewCatParent] = useState('');
+  const [creatingCat, setCreatingCat] = useState(false);
+
   useEffect(() => {
     api.get<{ categories: Category[] }>('/categories').then((d) => setCategories(d.categories));
   }, []);
+
+  const topCategories = categories.filter((c) => !c.parentId);
+  const childrenOf = (id: string) => categories.filter((c) => c.parentId === id);
+
+  async function createCategory() {
+    if (!newCatName.trim()) return;
+    setCreatingCat(true);
+    setError(null);
+    try {
+      const d = await api.post<{ category: Category }>('/categories', {
+        name: newCatName.trim(),
+        parentId: newCatParent || undefined,
+      });
+      const list = await api.get<{ categories: Category[] }>('/categories');
+      setCategories(list.categories);
+      set('categoryId', d.category.id);
+      setNewCatOpen(false);
+      setNewCatName('');
+      setNewCatParent('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create category');
+    } finally {
+      setCreatingCat(false);
+    }
+  }
 
   useEffect(() => {
     if (!isEdit) return;
@@ -153,21 +183,81 @@ export function ProductForm() {
               />
             </div>
             <div>
-              <label className="label">Category</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Category</label>
+                <button
+                  type="button"
+                  onClick={() => setNewCatOpen((o) => !o)}
+                  className="mb-1 text-xs text-primary hover:underline"
+                >
+                  {newCatOpen ? 'Cancel' : '+ New category'}
+                </button>
+              </div>
               <select
                 className="input"
                 value={form.categoryId}
                 onChange={(e) => set('categoryId', e.target.value)}
               >
                 <option value="">— none —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {topCategories.map((top) => {
+                  const subs = childrenOf(top.id);
+                  return subs.length ? (
+                    <optgroup key={top.id} label={top.name}>
+                      <option value={top.id}>{top.name} (all)</option>
+                      {subs.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : (
+                    <option key={top.id} value={top.id}>
+                      {top.name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
+
+          {newCatOpen && (
+            <div className="grid gap-3 rounded-lg bg-canvas p-3 sm:grid-cols-[1fr_1fr_auto]">
+              <div>
+                <label className="label">New category name</label>
+                <input
+                  className="input"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g. Sneakers"
+                />
+              </div>
+              <div>
+                <label className="label">Under (optional)</label>
+                <select
+                  className="input"
+                  value={newCatParent}
+                  onChange={(e) => setNewCatParent(e.target.value)}
+                >
+                  <option value="">— top level —</option>
+                  {topCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="self-end">
+                <button
+                  type="button"
+                  onClick={createCategory}
+                  disabled={creatingCat}
+                  className="btn-primary btn-sm"
+                >
+                  {creatingCat ? 'Creating…' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">Base price (৳) *</label>

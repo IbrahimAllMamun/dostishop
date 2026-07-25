@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { getCategories, getFacets, getProducts } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
 import { Filters } from '@/components/Filters';
+import { buildCategoryTree } from '@/lib/types';
 
 export const metadata = { title: 'Shop all' };
 
@@ -60,6 +61,16 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       ? categories.find((c) => c.slug === sp.category)?.name ?? 'Products'
       : 'Shop all';
 
+  // Category structure for the pill rows
+  const tree = buildCategoryTree(categories);
+  const selected = sp.category ? categories.find((c) => c.slug === sp.category) : undefined;
+  const selectedTop = selected
+    ? selected.parentId
+      ? tree.find((tc) => tc.id === selected.parentId)
+      : tree.find((tc) => tc.id === selected.id)
+    : undefined;
+  const subPills = selectedTop?.children ?? [];
+
   return (
     <div className="container-x space-y-6 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -87,7 +98,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      {/* Category pills */}
+      {/* Top-level category pills */}
       <div className="flex flex-wrap gap-2">
         <Link
           href={buildQuery(sp, { category: undefined, page: undefined })}
@@ -97,18 +108,45 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         >
           All
         </Link>
-        {categories.map((c) => (
+        {tree.map((c) => (
           <Link
             key={c.id}
             href={buildQuery(sp, { category: c.slug, page: undefined })}
             className={`rounded-full px-3 py-1.5 text-sm ${
-              sp.category === c.slug ? 'bg-ink text-white' : 'bg-sand text-ink'
+              selectedTop?.id === c.id ? 'bg-ink text-white' : 'bg-sand text-ink'
             }`}
           >
             {c.name}
           </Link>
         ))}
       </div>
+
+      {/* Subcategory pills for the selected category */}
+      {selectedTop && subPills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-l-2 border-primary/40 pl-3">
+          <Link
+            href={buildQuery(sp, { category: selectedTop.slug, page: undefined })}
+            className={`rounded-full px-3 py-1 text-xs ${
+              selected?.id === selectedTop.id
+                ? 'bg-primary text-white'
+                : 'bg-primary/10 text-primary'
+            }`}
+          >
+            All {selectedTop.name}
+          </Link>
+          {subPills.map((sub) => (
+            <Link
+              key={sub.id}
+              href={buildQuery(sp, { category: sub.slug, page: undefined })}
+              className={`rounded-full px-3 py-1 text-xs ${
+                selected?.id === sub.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+              }`}
+            >
+              {sub.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
         {/* Filters */}
@@ -124,7 +162,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               <p className="mt-1 text-sm">Try different keywords or clear some filters.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

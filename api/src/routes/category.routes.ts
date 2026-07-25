@@ -13,10 +13,11 @@ import { categoryCreateSchema, categoryUpdateSchema } from '../schemas/category.
 export const categoryRouter = Router();
 
 categoryRouter.get('/', listCategories);
+// Vendors may add categories/subcategories too; admins keep full edit/delete rights
 categoryRouter.post(
   '/',
   authenticate,
-  authorize('SUPER_ADMIN'),
+  authorize('SUPER_ADMIN', 'VENDOR'),
   validate(categoryCreateSchema),
   createCategory,
 );

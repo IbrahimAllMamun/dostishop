@@ -5,6 +5,21 @@ export interface Category {
   name: string;
   slug: string;
   imageUrl?: string | null;
+  parentId?: string | null;
+  sortOrder?: number;
+}
+
+export interface CategoryNode extends Category {
+  children: Category[];
+}
+
+/** Flat list -> two-level tree (top-level categories with their children). */
+export function buildCategoryTree(categories: Category[]): CategoryNode[] {
+  const tops = categories.filter((c) => !c.parentId);
+  return tops.map((t) => ({
+    ...t,
+    children: categories.filter((c) => c.parentId === t.id),
+  }));
 }
 
 export interface Shop {

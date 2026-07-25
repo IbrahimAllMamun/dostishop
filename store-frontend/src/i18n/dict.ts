@@ -5,6 +5,10 @@ export const dict = {
     'nav.track': 'Track order',
     'nav.cart': 'Cart',
     'nav.searchPlaceholder': 'Search bags, jewelry, cosmetics…',
+    'nav.menu': 'Menu',
+    'nav.categories': 'Categories',
+    'nav.openMenu': 'Open menu',
+    'nav.close': 'Close',
     // home
     'home.heroTitle': 'New season, new finds',
     'home.heroSubtitle':
@@ -92,6 +96,10 @@ export const dict = {
     'nav.track': 'অর্ডার ট্র্যাক',
     'nav.cart': 'কার্ট',
     'nav.searchPlaceholder': 'ব্যাগ, গয়না, কসমেটিক্স খুঁজুন…',
+    'nav.menu': 'মেনু',
+    'nav.categories': 'ক্যাটাগরি',
+    'nav.openMenu': 'মেনু খুলুন',
+    'nav.close': 'বন্ধ',
     'home.heroTitle': 'নতুন সিজন, নতুন কালেকশন',
     'home.heroSubtitle':
       'দেশি শপ থেকে বাছাই করা ব্যাগ, গয়না, কসমেটিক্স আরও অনেক কিছু। সারাদেশে ক্যাশ অন ডেলিভারি।',

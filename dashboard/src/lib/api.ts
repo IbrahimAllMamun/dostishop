@@ -1,6 +1,9 @@
 import { useAuth } from '@/store/auth';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+const API =
+  import.meta.env.NEXT_PUBLIC_API_URL ??
+  import.meta.env.VITE_API_URL ??
+  'http://localhost:4000/api/v1';
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = useAuth.getState().token;

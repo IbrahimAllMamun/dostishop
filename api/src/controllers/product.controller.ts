@@ -12,6 +12,16 @@ const productListInclude = {
   category: { select: { name: true, slug: true } },
 };
 
+/** Category filter that includes the category's subcategories. */
+async function categoryScope(slug: string): Promise<Prisma.ProductWhereInput> {
+  const cat = await prisma.category.findUnique({
+    where: { slug },
+    include: { children: { select: { id: true } } },
+  });
+  if (!cat) return { categoryId: '__none__' }; // unknown slug -> no results
+  return { categoryId: { in: [cat.id, ...cat.children.map((c) => c.id)] } };
+}
+
 /** Typo-tolerant search over name + brand; returns ids ranked by relevance.
  *  word_similarity matches the query against the best-matching part of the name,
  *  so "bakpack" still finds "Urban Travel Backpack". */
@@ -56,7 +66,7 @@ export const listProducts = asyncHandler(async (req, res) => {
   const skip = (currentPage - 1) * take;
 
   const where: Prisma.ProductWhereInput = { isActive: true, shop: { status: 'ACTIVE' } };
-  if (category) where.category = { slug: category };
+  if (category) Object.assign(where, await categoryScope(category));
   if (shop) where.shop = { slug: shop, status: 'ACTIVE' };
   if (featured === 'true') where.isFeatured = true;
   if (brand) where.brand = { in: brand.split(',') };
@@ -124,7 +134,7 @@ export const listProducts = asyncHandler(async (req, res) => {
 export const getFacets = asyncHandler(async (req, res) => {
   const { category, shop } = req.query as Record<string, string>;
   const where: Prisma.ProductWhereInput = { isActive: true, shop: { status: 'ACTIVE' } };
-  if (category) where.category = { slug: category };
+  if (category) Object.assign(where, await categoryScope(category));
   if (shop) where.shop = { slug: shop, status: 'ACTIVE' };
 
   const [brandRows, variantRows, priceAgg] = await Promise.all([
