@@ -34,7 +34,8 @@ Deploy in this order so each piece has the URL it depends on.
 3. Set these environment variables (Render dashboard → the service → Environment):
    - `DATABASE_URL` — the Neon string from step 1
    - `JWT_SECRET` — a long random string
-   - `CORS_ORIGIN` — your Vercel storefront + dashboard URLs, comma-separated (fill in after step 4, then redeploy): `https://<storefront>.vercel.app,https://<dashboard>.vercel.app`
+   - `CORS_ORIGIN` — your Vercel storefront + dashboard URLs, comma-separated (fill in after step 4, then redeploy). Entries support `*` wildcards for one hostname segment, which you need because Vercel also serves per-deployment URLs (`<project>-<hash>-<scope>.vercel.app`). Example:
+     `https://store-front-<scope>.vercel.app,https://store-front-*-<scope>.vercel.app,https://dashboard-<scope>.vercel.app,https://dashboard-*-<scope>.vercel.app`
    - `API_PUBLIC_URL` — the Render URL, e.g. `https://boutique-api.onrender.com`
    - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — from step 2
 4. First deploy runs `prisma migrate deploy` automatically (see `api/Dockerfile`), creating all tables.

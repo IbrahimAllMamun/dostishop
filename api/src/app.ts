@@ -5,7 +5,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import { corsOrigins, env, uploadsDir } from './config/env';
+import { env, uploadsDir } from './config/env';
+import { isAllowedOrigin } from './lib/cors';
 import { router } from './routes';
 import { notFound, errorHandler } from './middleware/error';
 
@@ -14,7 +15,12 @@ export function createApp() {
 
   // Allow images to be embedded cross-origin (storefront/dashboard on other ports)
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-  app.use(cors({ origin: corsOrigins, credentials: true }));
+  app.use(
+    cors({
+      origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+      credentials: true,
+    }),
+  );
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   if (env.NODE_ENV !== 'test') app.use(morgan('dev'));
