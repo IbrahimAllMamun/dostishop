@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { buildCategoryTree, type Category } from '@/lib/types';
 import { useT } from '@/i18n/I18nProvider';
@@ -9,6 +10,10 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Portal target exists only after mount (SSR renders just the button)
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -52,14 +57,18 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
         </svg>
       </button>
 
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm"
-          onClick={close}
-          aria-hidden
-        />
-      )}
+      {/* Rendered into <body>: the header's backdrop-filter would otherwise
+          become the containing block for these fixed elements */}
+      {mounted &&
+        createPortal(
+          <>
+            {open && (
+              <div
+                className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm"
+                onClick={close}
+                aria-hidden
+              />
+            )}
 
       {/* Panel */}
       <aside
@@ -149,6 +158,9 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
           <LanguageToggle />
         </div>
       </aside>
+          </>,
+          document.body,
+        )}
     </>
   );
 }
