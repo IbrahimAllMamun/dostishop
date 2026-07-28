@@ -14,6 +14,7 @@ import { AdminBanners } from '@/pages/admin/Banners';
 import { AdminSettings } from '@/pages/admin/Settings';
 import { AdminPayouts } from '@/pages/admin/Payouts';
 import { VendorPayouts } from '@/pages/vendor/Payouts';
+import { VendorCategories } from '@/pages/vendor/Categories';
 import { AdminOrders } from '@/pages/admin/Orders';
 import { VendorDashboard } from '@/pages/vendor/Dashboard';
 import { VendorProducts } from '@/pages/vendor/Products';
@@ -70,6 +71,7 @@ export function App() {
           <Route path="/vendor/orders" element={<VendorOrders />} />
           <Route path="/vendor/analytics" element={<VendorAnalytics />} />
           <Route path="/vendor/payouts" element={<VendorPayouts />} />
+          <Route path="/vendor/categories" element={<VendorCategories />} />
           <Route path="/vendor/shop" element={<ShopProfile />} />
         </Route>
 

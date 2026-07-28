@@ -18,6 +18,8 @@ export function AdminCategories() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState('');
 
   function load() {
     api
@@ -74,6 +76,17 @@ export function AdminCategories() {
     }
   }
 
+  async function applyMove(c: Category) {
+    try {
+      await api.patch(`/categories/${c.id}`, { parentId: moveTarget || null });
+      setMovingId(null);
+      setMoveTarget('');
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
   async function move(c: Category, siblings: Category[], dir: -1 | 1) {
     const idx = siblings.findIndex((x) => x.id === c.id);
     const swap = siblings[idx + dir];
@@ -97,6 +110,43 @@ export function AdminCategories() {
     hasChildren: boolean;
   }) {
     const i = siblings.findIndex((x) => x.id === c.id);
+    // A category with children must stay top-level (2-level cap); anything else can move
+    const canReparent = !hasChildren;
+
+    if (movingId === c.id) {
+      return (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 bg-canvas px-4 py-2.5"
+          style={{ paddingLeft: depth ? 32 : 16 }}
+        >
+          <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted">Move under:</span>
+            <select
+              className="input w-auto py-1 text-sm"
+              value={moveTarget}
+              onChange={(e) => setMoveTarget(e.target.value)}
+            >
+              <option value="">— top level —</option>
+              {tree
+                .filter((t) => t.id !== c.id)
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
+            <button onClick={() => applyMove(c)} className="btn-primary btn-sm">
+              Save
+            </button>
+            <button onClick={() => setMovingId(null)} className="btn-ghost btn-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className="flex items-center justify-between px-4 py-2.5"
@@ -108,6 +158,17 @@ export function AdminCategories() {
           <span className="text-xs text-muted">/{c.slug}</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
+          {canReparent && (
+            <button
+              onClick={() => {
+                setMovingId(c.id);
+                setMoveTarget(c.parentId ?? '');
+              }}
+              className="text-muted hover:text-ink"
+            >
+              Move
+            </button>
+          )}
           <button
             onClick={() => move(c, siblings, -1)}
             disabled={i === 0}
