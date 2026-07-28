@@ -6,14 +6,15 @@ shop across all shops with a single guest checkout.
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
-| Storefront | Next.js (App Router) + TypeScript *(coming next)* |
-| Admin + Vendor dashboard | React + Vite + TypeScript *(coming next)* |
-| API | Express + TypeScript |
-| ORM / DB | Prisma + PostgreSQL |
-| Auth | JWT (httpOnly cookie) + bcrypt, role-based (super_admin / vendor) |
-| Dev infra | Docker Compose (Postgres + Adminer) |
+
+| Layer                    | Tech                                                              |
+| -------------------------- | ------------------------------------------------------------------- |
+| Storefront               | Next.js (App Router) + TypeScript*(coming next)*                  |
+| Admin + Vendor dashboard | React + Vite + TypeScript*(coming next)*                          |
+| API                      | Express + TypeScript                                              |
+| ORM / DB                 | Prisma + PostgreSQL                                               |
+| Auth                     | JWT (httpOnly cookie) + bcrypt, role-based (super_admin / vendor) |
+| Dev infra                | Docker Compose (Postgres + Adminer)                               |
 
 Customers are **not** authenticated — cart lives in the browser, checkout is guest,
 and orders are tracked by order number + phone. The only logins are **super admin**
@@ -46,10 +47,12 @@ Health check: http://localhost:4000/health
 
 ### Seeded logins
 
-| Role | Email | Password |
-|---|---|---|
-| Super Admin | admin@boutique.test | Admin@123 |
-| Vendor | vendor@boutique.test | Vendor@123 |
+
+| Role        | Email                     | Password    |
+| ------------- | --------------------------- | ------------- |
+| Super Admin | admin@boutique.test       | Admin@123   |
+| Vendor      | vendor@boutique.test      | Vendor@123  |
+| Vendor      | comfortwalk@boutique.test | Tmpc3gaw038 |
 
 ## Project layout
 
