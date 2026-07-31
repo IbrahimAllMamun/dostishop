@@ -146,7 +146,7 @@ export function ProductForm() {
     }
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <p className="text-muted-foreground">Loading…</p>;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -306,7 +306,7 @@ export function ProductForm() {
         {/* Images */}
         <div className="card space-y-3 p-6">
           <h2 className="font-semibold">Product images</h2>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted-foreground">
             Upload from your device (max 5MB each). Stored locally in dev; on Cloudinary when
             configured.
           </p>
@@ -382,7 +382,7 @@ export function ProductForm() {
               )}
             </div>
           ))}
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted-foreground">
             Leave size/color blank for a single default variant. Stock controls availability.
           </p>
         </div>

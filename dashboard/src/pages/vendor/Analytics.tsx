@@ -23,7 +23,7 @@ export function VendorAnalytics() {
   }, []);
 
   if (error) return <p className="text-sale">{error}</p>;
-  if (!data) return <p className="text-muted">Loading…</p>;
+  if (!data) return <p className="text-muted-foreground">Loading…</p>;
 
   const max = Math.max(...data.daily.map((d) => d.revenue), 1);
 
@@ -54,7 +54,7 @@ export function VendorAnalytics() {
             </div>
           ))}
         </div>
-        <div className="mt-2 flex justify-between text-xs text-muted">
+        <div className="mt-2 flex justify-between text-xs text-muted-foreground">
           <span>{data.daily[0]?.date}</span>
           <span>{data.daily[data.daily.length - 1]?.date}</span>
         </div>
@@ -75,7 +75,7 @@ export function VendorAnalytics() {
             <tbody>
               {data.topProducts.length === 0 ? (
                 <tr>
-                  <td className="td text-muted" colSpan={3}>
+                  <td className="td text-muted-foreground" colSpan={3}>
                     No sales yet.
                   </td>
                 </tr>
@@ -102,7 +102,7 @@ export function VendorAnalytics() {
                 <span className="font-medium">{s.count}</span>
               </div>
             ))}
-            {data.byStatus.length === 0 && <p className="text-sm text-muted">No orders yet.</p>}
+            {data.byStatus.length === 0 && <p className="text-sm text-muted-foreground">No orders yet.</p>}
           </div>
         </div>
       </div>

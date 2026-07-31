@@ -36,7 +36,7 @@ export function Login() {
           <p className="text-2xl font-bold">
             Boutique<span className="text-primary">BD</span>
           </p>
-          <p className="mt-1 text-sm text-muted">Admin &amp; Vendor Dashboard</p>
+          <p className="mt-1 text-sm text-muted-foreground">Admin &amp; Vendor Dashboard</p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
@@ -68,7 +68,7 @@ export function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           Want to sell with us?{' '}
           <Link to="/signup" className="font-medium text-primary hover:underline">
             Create a shop

@@ -19,9 +19,9 @@ export function StatCard({
           : 'text-ink';
   return (
     <div className="card p-5">
-      <p className="text-sm text-muted">{label}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p className={`mt-1 text-3xl font-bold ${toneClass}`}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

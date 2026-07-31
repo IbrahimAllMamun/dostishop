@@ -80,13 +80,13 @@ export function AdminShops() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={5}>
+                <td className="td text-muted-foreground" colSpan={5}>
                   Loading…
                 </td>
               </tr>
             ) : shops.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={5}>
+                <td className="td text-muted-foreground" colSpan={5}>
                   No shops.
                 </td>
               </tr>
@@ -95,11 +95,11 @@ export function AdminShops() {
                 <tr key={s.id} className="border-b border-ink/5 last:border-0">
                   <td className="td">
                     <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-muted">/{s.slug}</div>
+                    <div className="text-xs text-muted-foreground">/{s.slug}</div>
                   </td>
                   <td className="td">
                     <div>{s.owner?.name}</div>
-                    <div className="text-xs text-muted">{s.owner?.email}</div>
+                    <div className="text-xs text-muted-foreground">{s.owner?.email}</div>
                   </td>
                   <td className="td">{s.commissionRate ? `${Number(s.commissionRate)}%` : '—'}</td>
                   <td className="td">

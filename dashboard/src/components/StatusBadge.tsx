@@ -4,7 +4,7 @@ const MAP: Record<string, string> = {
   PAID: 'bg-success/15 text-success',
   RECOVERED: 'bg-success/15 text-success',
   OPEN: 'bg-gold/20 text-warn',
-  DISMISSED: 'bg-ink/10 text-muted',
+  DISMISSED: 'bg-ink/10 text-muted-foreground',
   PENDING: 'bg-gold/20 text-warn',
   UNPAID: 'bg-gold/20 text-warn',
   PROCESSING: 'bg-gold/20 text-warn',

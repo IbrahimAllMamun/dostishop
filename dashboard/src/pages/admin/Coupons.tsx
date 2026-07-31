@@ -139,13 +139,13 @@ export function AdminCoupons() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={6}>
+                <td className="td text-muted-foreground" colSpan={6}>
                   Loading…
                 </td>
               </tr>
             ) : coupons.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={6}>
+                <td className="td text-muted-foreground" colSpan={6}>
                   No coupons yet.
                 </td>
               </tr>
@@ -170,7 +170,7 @@ export function AdminCoupons() {
                     </button>
                   </td>
                   <td className="td text-right">
-                    <button onClick={() => remove(c.id)} className="text-sm text-muted hover:text-sale">
+                    <button onClick={() => remove(c.id)} className="text-sm text-muted-foreground hover:text-sale">
                       Delete
                     </button>
                   </td>

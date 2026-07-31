@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* shadcn semantic tokens, mapped to the Boutique BD brand palette.
+     Values are HSL triplets (Tailwind v3 convention: hsl(var(--token))). */
+  :root {
+    --background: 34 28% 95.1%; /* canvas  #F6F3EF */
+    --foreground: 30 6.3% 12.5%; /* ink     #22201E */
+
+    --card: 0 0% 100%; /* surface #FFFFFF */
+    --card-foreground: 30 6.3% 12.5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 6.3% 12.5%;
+
+    --primary: 346 36.7% 46.5%; /* clay rose #A24B5F */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 34 36.8% 88.8%; /* sand #EDE4D8 */
+    --secondary-foreground: 30 6.3% 12.5%;
+
+    --muted: 34 36.8% 88.8%; /* subtle surface = sand */
+    --muted-foreground: 30 7.1% 50.6%; /* secondary text #8A8178 */
+
+    /* shadcn's `accent` is the subtle hover surface (menu items, ghost buttons),
+       not a brand accent — keep it quiet. Gold stays available as `bg-gold`. */
+    --accent: 34 36.8% 88.8%; /* sand #EDE4D8 */
+    --accent-foreground: 30 6.3% 12.5%;
+
+    --destructive: 6 63.4% 46.1%; /* sale red #C0392B */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 34 22.9% 86.3%;
+    --input: 34 22.9% 86.3%;
+    --ring: 346 36.7% 46.5%;
+
+    --radius: 0.5rem;
+  }
+}
+
 :root {
   color-scheme: light;
 }
@@ -32,7 +69,7 @@ body {
     @apply px-3 py-1.5 text-xs;
   }
   .input {
-    @apply w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20;
   }
   .label {
     @apply mb-1 block text-sm font-medium;
@@ -44,7 +81,7 @@ body {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted;
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
   }
   .td {
     @apply px-4 py-3 text-sm;

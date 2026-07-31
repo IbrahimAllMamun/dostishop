@@ -114,9 +114,9 @@ export function VendorOrders() {
       )}
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : subOrders.length === 0 ? (
-        <div className="card p-8 text-center text-muted">
+        <div className="card p-8 text-center text-muted-foreground">
           {tab === 'PENDING' ? 'No orders waiting for confirmation. 🎉' : 'No orders here.'}
         </div>
       ) : (
@@ -129,13 +129,13 @@ export function VendorOrders() {
                     <span className="font-semibold">{s.order?.orderNo}</span>
                     <StatusBadge status={s.status} />
                   </div>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {s.order && formatDate(s.order.createdAt)} · {s.order?.paymentMethod}
                   </p>
                 </div>
                 <div className="text-right text-sm">
                   <div className="font-medium">Payout {formatTk(s.vendorPayout)}</div>
-                  <div className="text-xs text-muted">
+                  <div className="text-xs text-muted-foreground">
                     Subtotal {formatTk(s.subtotal)} · commission {formatTk(s.commissionAmount)}
                   </div>
                 </div>
@@ -145,11 +145,11 @@ export function VendorOrders() {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg bg-canvas p-3 text-sm">
                   <p className="font-medium">{s.order?.customerName}</p>
-                  <p className="text-muted">{s.order?.phone}</p>
-                  <p className="text-muted">
+                  <p className="text-muted-foreground">{s.order?.phone}</p>
+                  <p className="text-muted-foreground">
                     {s.order?.address}, {s.order?.city}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-muted-foreground">
                     {s.order?.zone === 'inside_dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'} · shipping{' '}
                     {formatTk(s.shippingCost)}
                   </p>
@@ -169,7 +169,7 @@ export function VendorOrders() {
 
               {/* Actions */}
               <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ink/5 pt-4">
-                <label className="text-sm text-muted">Update status</label>
+                <label className="text-sm text-muted-foreground">Update status</label>
                 <select
                   className="input w-auto"
                   value={s.status}

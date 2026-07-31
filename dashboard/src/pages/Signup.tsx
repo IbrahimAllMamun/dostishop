@@ -54,7 +54,7 @@ export function Signup() {
           <p className="text-2xl font-bold">
             Boutique<span className="text-primary">BD</span>
           </p>
-          <p className="mt-1 text-sm text-muted">Open your shop — sell to customers nationwide</p>
+          <p className="mt-1 text-sm text-muted-foreground">Open your shop — sell to customers nationwide</p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
@@ -116,11 +116,11 @@ export function Signup() {
           </button>
         </form>
 
-        <p className="mt-4 rounded-lg bg-sand/60 px-3 py-2 text-center text-xs text-muted">
+        <p className="mt-4 rounded-lg bg-sand/60 px-3 py-2 text-center text-xs text-muted-foreground">
           Your shop is reviewed by an admin before it goes live. You can add products right away.
         </p>
 
-        <p className="mt-4 text-center text-sm text-muted">
+        <p className="mt-4 text-center text-sm text-muted-foreground">
           Already have a shop?{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in

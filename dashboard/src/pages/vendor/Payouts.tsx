@@ -21,7 +21,7 @@ export function VendorPayouts() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Payouts</h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Settlements for your delivered orders.
           {pending > 0 && (
             <>
@@ -48,26 +48,26 @@ export function VendorPayouts() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={7}>
+                <td className="td text-muted-foreground" colSpan={7}>
                   Loading…
                 </td>
               </tr>
             ) : payouts.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={7}>
+                <td className="td text-muted-foreground" colSpan={7}>
                   No payouts yet — they appear once your delivered orders are settled by the platform.
                 </td>
               </tr>
             ) : (
               payouts.map((p) => (
                 <tr key={p.id} className="border-b border-ink/5 last:border-0">
-                  <td className="td whitespace-nowrap text-muted">{formatDate(p.createdAt)}</td>
-                  <td className="td whitespace-nowrap text-xs text-muted">
+                  <td className="td whitespace-nowrap text-muted-foreground">{formatDate(p.createdAt)}</td>
+                  <td className="td whitespace-nowrap text-xs text-muted-foreground">
                     {formatDate(p.periodFrom)} → {formatDate(p.periodTo)}
                   </td>
                   <td className="td">{p._count?.subOrders ?? '—'}</td>
                   <td className="td">{formatTk(p.gross)}</td>
-                  <td className="td text-muted">−{formatTk(p.commission)}</td>
+                  <td className="td text-muted-foreground">−{formatTk(p.commission)}</td>
                   <td className="td font-semibold">{formatTk(p.net)}</td>
                   <td className="td">
                     <StatusBadge status={p.status} />

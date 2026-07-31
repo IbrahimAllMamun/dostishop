@@ -74,7 +74,7 @@ export function Layout() {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `whitespace-nowrap text-sm ${isActive ? 'text-primary' : 'text-muted'}`
+                  `whitespace-nowrap text-sm ${isActive ? 'text-primary' : 'text-muted-foreground'}`
                 }
               >
                 {item.label}
@@ -82,7 +82,7 @@ export function Layout() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="text-muted">
+            <span className="text-muted-foreground">
               {user?.name}
               {user?.shop ? ` · ${user.shop.name}` : ''}
             </span>

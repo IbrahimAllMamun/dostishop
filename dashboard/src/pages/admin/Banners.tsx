@@ -88,15 +88,15 @@ export function AdminBanners() {
       </form>
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {banners.map((b) => (
             <div key={b.id} className="card overflow-hidden">
               <img src={b.imageUrl} alt="" className="h-32 w-full object-cover" />
               <div className="space-y-1 p-4">
-                <p className="font-medium">{b.title ?? <span className="text-muted">No title</span>}</p>
-                <p className="text-xs text-muted">{b.linkUrl ?? 'No link'}</p>
+                <p className="font-medium">{b.title ?? <span className="text-muted-foreground">No title</span>}</p>
+                <p className="text-xs text-muted-foreground">{b.linkUrl ?? 'No link'}</p>
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     onClick={() => toggle(b)}
@@ -106,7 +106,7 @@ export function AdminBanners() {
                   </button>
                   <button
                     onClick={() => remove(b.id)}
-                    className="ml-auto text-sm text-muted hover:text-sale"
+                    className="ml-auto text-sm text-muted-foreground hover:text-sale"
                   >
                     Delete
                   </button>

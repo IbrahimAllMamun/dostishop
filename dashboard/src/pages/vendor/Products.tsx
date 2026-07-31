@@ -132,13 +132,13 @@ export function VendorProducts() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={5}>
+                <td className="td text-muted-foreground" colSpan={5}>
                   Loading…
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={5}>
+                <td className="td text-muted-foreground" colSpan={5}>
                   No products yet. Click “Add product”.
                 </td>
               </tr>
@@ -160,7 +160,7 @@ export function VendorProducts() {
                   <td className="td">
                     {formatTk(p.salePrice ?? p.basePrice)}
                     {p.salePrice && (
-                      <span className="ml-1 text-xs text-muted line-through">
+                      <span className="ml-1 text-xs text-muted-foreground line-through">
                         {formatTk(p.basePrice)}
                       </span>
                     )}
@@ -180,7 +180,7 @@ export function VendorProducts() {
                     >
                       Edit
                     </Link>
-                    <button onClick={() => remove(p.id)} className="text-sm text-muted hover:text-sale">
+                    <button onClick={() => remove(p.id)} className="text-sm text-muted-foreground hover:text-sale">
                       Delete
                     </button>
                   </td>

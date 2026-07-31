@@ -47,7 +47,7 @@ export function VendorCategories() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Categories</h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted-foreground">
           Don’t see a fitting category for your products? Add one — it becomes available to every
           shop. Renaming and removing is handled by the platform admin.
         </p>
@@ -82,14 +82,14 @@ export function VendorCategories() {
 
       <div className="card divide-y divide-ink/5">
         {loading ? (
-          <p className="p-4 text-muted">Loading…</p>
+          <p className="p-4 text-muted-foreground">Loading…</p>
         ) : (
           tops.map((top) => (
             <div key={top.id}>
               <div className="px-4 py-2.5 font-medium">{top.name}</div>
               {childrenOf(top.id).map((sub) => (
                 <div key={sub.id} className="flex items-center gap-2 py-2 pl-8 text-sm">
-                  <span className="text-muted">└</span> {sub.name}
+                  <span className="text-muted-foreground">└</span> {sub.name}
                 </div>
               ))}
             </div>

@@ -31,7 +31,7 @@ export function AdminAbandoned() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Abandoned checkouts</h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Shoppers who typed their phone at checkout but never placed the order — call them back.
           </p>
         </div>
@@ -49,9 +49,9 @@ export function AdminAbandoned() {
       </div>
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
-        <div className="card p-8 text-center text-muted">Nothing here.</div>
+        <div className="card p-8 text-center text-muted-foreground">Nothing here.</div>
       ) : (
         <div className="space-y-3">
           {rows.map((r) => (
@@ -66,7 +66,7 @@ export function AdminAbandoned() {
                 <StatusBadge status={r.status} />
                 <div className="ml-auto text-right">
                   <p className="font-semibold">{formatTk(r.subtotal)}</p>
-                  <p className="text-xs text-muted">{formatDate(r.updatedAt)}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(r.updatedAt)}</p>
                 </div>
               </div>
               <div className="mt-3 space-y-1 rounded-lg bg-canvas p-3 text-sm">

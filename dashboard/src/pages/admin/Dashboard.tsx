@@ -29,7 +29,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Overview</h1>
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -67,7 +67,7 @@ export function AdminDashboard() {
                   ))}
                   {orders.length === 0 && (
                     <tr>
-                      <td className="td text-muted" colSpan={4}>
+                      <td className="td text-muted-foreground" colSpan={4}>
                         No orders yet.
                       </td>
                     </tr>

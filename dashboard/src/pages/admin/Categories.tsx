@@ -121,7 +121,7 @@ export function AdminCategories() {
         >
           <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted">Move under:</span>
+            <span className="text-xs text-muted-foreground">Move under:</span>
             <select
               className="input w-auto py-1 text-sm"
               value={moveTarget}
@@ -153,9 +153,9 @@ export function AdminCategories() {
         style={{ paddingLeft: depth ? 32 : 16 }}
       >
         <div className="flex items-center gap-2">
-          {depth > 0 && <span className="text-muted">└</span>}
+          {depth > 0 && <span className="text-muted-foreground">└</span>}
           <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
-          <span className="text-xs text-muted">/{c.slug}</span>
+          <span className="text-xs text-muted-foreground">/{c.slug}</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
           {canReparent && (
@@ -164,7 +164,7 @@ export function AdminCategories() {
                 setMovingId(c.id);
                 setMoveTarget(c.parentId ?? '');
               }}
-              className="text-muted hover:text-ink"
+              className="text-muted-foreground hover:text-ink"
             >
               Move
             </button>
@@ -172,7 +172,7 @@ export function AdminCategories() {
           <button
             onClick={() => move(c, siblings, -1)}
             disabled={i === 0}
-            className="text-muted hover:text-ink disabled:opacity-30"
+            className="text-muted-foreground hover:text-ink disabled:opacity-30"
             aria-label="Move up"
           >
             ↑
@@ -180,7 +180,7 @@ export function AdminCategories() {
           <button
             onClick={() => move(c, siblings, 1)}
             disabled={i === siblings.length - 1}
-            className="text-muted hover:text-ink disabled:opacity-30"
+            className="text-muted-foreground hover:text-ink disabled:opacity-30"
             aria-label="Move down"
           >
             ↓
@@ -188,7 +188,7 @@ export function AdminCategories() {
           <button onClick={() => rename(c)} className="text-primary hover:underline">
             Rename
           </button>
-          <button onClick={() => remove(c, hasChildren)} className="text-muted hover:text-sale">
+          <button onClick={() => remove(c, hasChildren)} className="text-muted-foreground hover:text-sale">
             Delete
           </button>
         </div>
@@ -229,7 +229,7 @@ export function AdminCategories() {
 
       <div className="card divide-y divide-ink/5">
         {loading ? (
-          <p className="p-4 text-muted">Loading…</p>
+          <p className="p-4 text-muted-foreground">Loading…</p>
         ) : (
           tree.map((top) => (
             <div key={top.id}>
@@ -242,7 +242,7 @@ export function AdminCategories() {
         )}
       </div>
 
-      <p className="text-xs text-muted">
+      <p className="text-xs text-muted-foreground">
         Vendors can also add categories when creating products. Two levels max: category →
         subcategory.
       </p>

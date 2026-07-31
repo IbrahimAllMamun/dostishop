@@ -34,13 +34,13 @@ export function AdminOrders() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={6}>
+                <td className="td text-muted-foreground" colSpan={6}>
                   Loading…
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={6}>
+                <td className="td text-muted-foreground" colSpan={6}>
                   No orders yet.
                 </td>
               </tr>
@@ -48,16 +48,16 @@ export function AdminOrders() {
               orders.map((o) => (
                 <tr key={o.id} className="border-b border-ink/5 align-top last:border-0">
                   <td className="td font-medium">{o.orderNo}</td>
-                  <td className="td whitespace-nowrap text-muted">{formatDate(o.createdAt)}</td>
+                  <td className="td whitespace-nowrap text-muted-foreground">{formatDate(o.createdAt)}</td>
                   <td className="td">
                     <div>{o.customerName}</div>
-                    <div className="text-xs text-muted">{o.phone}</div>
+                    <div className="text-xs text-muted-foreground">{o.phone}</div>
                   </td>
                   <td className="td">
                     <div className="flex flex-col gap-1">
                       {o.subOrders.map((s) => (
                         <div key={s.id} className="flex items-center gap-2">
-                          <span className="text-xs text-muted">{s.shop?.name}</span>
+                          <span className="text-xs text-muted-foreground">{s.shop?.name}</span>
                           <StatusBadge status={s.status} />
                         </div>
                       ))}

@@ -56,7 +56,7 @@ export function AdminSettings() {
     }
   }
 
-  if (loading) return <p className="text-muted">Loading…</p>;
+  if (loading) return <p className="text-muted-foreground">Loading…</p>;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

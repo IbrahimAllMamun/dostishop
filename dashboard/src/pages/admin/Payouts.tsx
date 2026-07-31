@@ -43,7 +43,7 @@ export function AdminPayouts() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Vendor payouts</h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Bundles every delivered, unsettled sub-order into one payout per shop.
           </p>
         </div>
@@ -71,13 +71,13 @@ export function AdminPayouts() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="td text-muted" colSpan={8}>
+                <td className="td text-muted-foreground" colSpan={8}>
                   Loading…
                 </td>
               </tr>
             ) : payouts.length === 0 ? (
               <tr>
-                <td className="td text-muted" colSpan={8}>
+                <td className="td text-muted-foreground" colSpan={8}>
                   No payouts yet. Mark sub-orders DELIVERED, then generate.
                 </td>
               </tr>
@@ -85,12 +85,12 @@ export function AdminPayouts() {
               payouts.map((p) => (
                 <tr key={p.id} className="border-b border-ink/5 last:border-0">
                   <td className="td font-medium">{p.shop?.name}</td>
-                  <td className="td whitespace-nowrap text-xs text-muted">
+                  <td className="td whitespace-nowrap text-xs text-muted-foreground">
                     {formatDate(p.periodFrom)} → {formatDate(p.periodTo)}
                   </td>
                   <td className="td">{p._count?.subOrders ?? '—'}</td>
                   <td className="td">{formatTk(p.gross)}</td>
-                  <td className="td text-muted">{formatTk(p.commission)}</td>
+                  <td className="td text-muted-foreground">{formatTk(p.commission)}</td>
                   <td className="td font-semibold">{formatTk(p.net)}</td>
                   <td className="td">
                     <StatusBadge status={p.status} />

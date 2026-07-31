@@ -69,9 +69,9 @@ export function AdminReviews() {
       </div>
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : reviews.length === 0 ? (
-        <div className="card p-8 text-center text-muted">No {filter.toLowerCase()} reviews.</div>
+        <div className="card p-8 text-center text-muted-foreground">No {filter.toLowerCase()} reviews.</div>
       ) : (
         <div className="space-y-3">
           {reviews.map((r) => (
@@ -79,14 +79,14 @@ export function AdminReviews() {
               <div className="flex flex-wrap items-center gap-2">
                 <StarsInline n={r.rating} />
                 <span className="font-medium">{r.customerName}</span>
-                <span className="text-xs text-muted">{r.phone}</span>
+                <span className="text-xs text-muted-foreground">{r.phone}</span>
                 {r.isVerified && (
                   <span className="badge bg-success/15 text-success">✓ Verified</span>
                 )}
                 <StatusBadge status={r.status} />
-                <span className="ml-auto text-xs text-muted">{formatDate(r.createdAt)}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{formatDate(r.createdAt)}</span>
               </div>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-1 text-sm text-muted-foreground">
                 On: <span className="font-medium text-ink">{r.product?.name}</span>
                 {r.orderNo && <span> · order {r.orderNo}</span>}
               </p>
@@ -119,7 +119,7 @@ export function AdminReviews() {
                 )}
                 <button
                   onClick={() => remove(r.id)}
-                  className="btn-sm ml-auto text-muted hover:text-sale"
+                  className="btn-sm ml-auto text-muted-foreground hover:text-sale"
                 >
                   Delete
                 </button>

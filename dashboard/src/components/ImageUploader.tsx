@@ -72,7 +72,7 @@ export function ImageUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink/20 text-xs text-muted transition hover:border-primary hover:text-primary disabled:opacity-50"
+          className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink/20 text-xs text-muted-foreground transition hover:border-primary hover:text-primary disabled:opacity-50"
         >
           {busy ? 'Uploading…' : (
             <>
