@@ -1,16 +1,25 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getBanners, getCategories, getProducts } from '@/lib/api';
+import {
+  getBanners,
+  getBestSellers,
+  getCategories,
+  getPriceDrops,
+  getProducts,
+} from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductRow } from '@/components/ProductRow';
 import { getT } from '@/i18n/server';
 
 export default async function HomePage() {
   const t = await getT();
-  const [banners, categories, featured, latest] = await Promise.all([
+  const [banners, categories, featured, latest, bestSellers, priceDrops] = await Promise.all([
     getBanners().catch(() => []),
     getCategories().catch(() => []),
     getProducts({ featured: true }).catch(() => ({ products: [], pagination: null as never })),
     getProducts({ sort: 'newest' }).catch(() => ({ products: [], pagination: null as never })),
+    getBestSellers(10).catch(() => []),
+    getPriceDrops(10).catch(() => []),
   ]);
   const hero = banners[0];
 
@@ -87,6 +96,22 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Best sellers — ranked by units actually sold */}
+      <ProductRow
+        title={t('home.bestSellers')}
+        products={bestSellers}
+        href="/products?sort=rating"
+        viewAllLabel={t('home.viewAll')}
+      />
+
+      {/* Price drops — biggest discounts first */}
+      <ProductRow
+        title={t('home.priceDrops')}
+        products={priceDrops}
+        href="/products?sort=price_asc"
+        viewAllLabel={t('home.viewAll')}
+      />
 
       {/* Latest */}
       {latest.products.length > 0 && (

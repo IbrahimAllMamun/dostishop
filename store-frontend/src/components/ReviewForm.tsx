@@ -118,6 +118,9 @@ export function ReviewForm({ productId }: { productId: string }) {
           <span className="text-sm font-medium">Phone *</span>
           <input
             required
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             className="input"
             placeholder="01XXXXXXXXX"
             value={form.phone}

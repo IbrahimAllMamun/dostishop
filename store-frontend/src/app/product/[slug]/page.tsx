@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getProduct } from '@/lib/api';
 import { ProductDetail } from '@/components/ProductDetail';
 import { ReviewsSection } from '@/components/ReviewsSection';
+import { RelatedProducts } from '@/components/RelatedProducts';
 
 export async function generateMetadata({
   params,
@@ -64,13 +65,43 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : {}),
   };
 
+  // Breadcrumb trail: Home / Shop / Category? / Product
+  const crumbs = [
+    { name: 'Home', item: site },
+    { name: 'Shop', item: `${site}/products` },
+    ...(product.category
+      ? [
+          {
+            name: product.category.name,
+            item: `${site}/products?category=${product.category.slug}`,
+          },
+        ]
+      : []),
+    { name: product.name, item: `${site}/product/${product.slug}` },
+  ];
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: c.item,
+    })),
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <ProductDetail product={product} />
+      <RelatedProducts productId={product.id} />
       <ReviewsSection productId={product.id} />
     </>
   );

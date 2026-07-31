@@ -28,6 +28,7 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
 
   const MENU_LINKS: Array<{ href: string; label: string }> = [
     { href: '/products', label: t('footer.allProducts') },
+    { href: '/wishlist', label: t('nav.wishlist') },
     { href: '/track', label: t('nav.track') },
     { href: '/about', label: t('footer.about') },
     { href: '/contact', label: t('footer.contact') },
@@ -40,7 +41,7 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
       <button
         onClick={() => setOpen(true)}
         aria-label={t('nav.openMenu')}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-sand"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-ink transition hover:bg-sand"
       >
         <svg
           width="22"
@@ -84,7 +85,7 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
           <button
             onClick={close}
             aria-label={t('nav.close')}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-sand hover:text-ink"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted transition hover:bg-sand hover:text-ink"
           >
             ✕
           </button>
@@ -110,7 +111,7 @@ export function MenuDrawer({ categories }: { categories: Category[] }) {
                     <button
                       onClick={() => setExpanded(expanded === cat.id ? null : cat.id)}
                       aria-label={`${cat.name} subcategories`}
-                      className={`flex h-8 w-8 items-center justify-center text-muted transition ${
+                      className={`flex h-11 w-11 items-center justify-center text-muted transition ${
                         expanded === cat.id ? 'rotate-180 text-primary' : ''
                       }`}
                     >

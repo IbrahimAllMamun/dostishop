@@ -59,6 +59,8 @@ export interface Product {
   isFeatured: boolean;
   ratingAvg?: Money;
   ratingCount?: number;
+  unitsSold?: number;
+  discountPct?: number;
   images: ProductImage[];
   variants?: Variant[];
   shop?: { name: string; slug: string } | null;

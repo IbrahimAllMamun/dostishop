@@ -3,6 +3,7 @@ import { CartButton } from './CartButton';
 import { SearchBar } from './SearchBar';
 import { LanguageToggle } from './LanguageToggle';
 import { MenuDrawer } from './MenuDrawer';
+import { WishlistButton } from './WishlistButton';
 import { getCategories } from '@/lib/api';
 import { getT } from '@/i18n/server';
 
@@ -32,6 +33,7 @@ export async function Header() {
           <span className="hidden sm:inline-flex">
             <LanguageToggle />
           </span>
+          <WishlistButton />
           <CartButton />
         </nav>
       </div>

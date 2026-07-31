@@ -4,6 +4,10 @@ import {
   getProductBySlug,
   getFacets,
   suggestProducts,
+  getBestSellers,
+  getPriceDrops,
+  getRelatedProducts,
+  listBrands,
   listMyProducts,
   getMyProduct,
   createProduct,
@@ -37,4 +41,8 @@ productRouter.delete('/:id', authenticate, authorize('VENDOR'), deleteProduct);
 productRouter.get('/', listProducts);
 productRouter.get('/facets', getFacets);
 productRouter.get('/suggest', suggestProducts);
+productRouter.get('/bestsellers', getBestSellers);
+productRouter.get('/price-drops', getPriceDrops);
+productRouter.get('/brands', listBrands);
+productRouter.get('/:id/related', getRelatedProducts);
 productRouter.get('/slug/:slug', getProductBySlug);

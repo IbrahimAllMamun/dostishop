@@ -65,6 +65,9 @@ function TrackInner() {
           <span className="text-sm font-medium">{t('track.phone')}</span>
           <input
             required
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             className="input"
             placeholder="01XXXXXXXXX"
             value={phone}

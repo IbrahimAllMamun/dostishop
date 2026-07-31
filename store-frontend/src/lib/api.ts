@@ -102,6 +102,26 @@ export async function getSuggestions(q: string): Promise<Suggestion[]> {
   return data.suggestions as Suggestion[];
 }
 
+export async function getBestSellers(limit = 10): Promise<Product[]> {
+  const d = await api<{ products: Product[] }>(`/products/bestsellers?limit=${limit}`);
+  return d.products;
+}
+
+export async function getPriceDrops(limit = 10): Promise<Product[]> {
+  const d = await api<{ products: Product[] }>(`/products/price-drops?limit=${limit}`);
+  return d.products;
+}
+
+export async function getRelatedProducts(productId: string, limit = 8): Promise<Product[]> {
+  const d = await api<{ products: Product[] }>(`/products/${productId}/related?limit=${limit}`);
+  return d.products;
+}
+
+export async function getBrands(): Promise<Array<{ name: string; count: number }>> {
+  const d = await api<{ brands: Array<{ name: string; count: number }> }>('/products/brands');
+  return d.brands;
+}
+
 export async function getProduct(slug: string): Promise<Product> {
   const d = await api<{ product: Product }>(`/products/slug/${slug}`);
   return d.product;

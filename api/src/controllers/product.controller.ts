@@ -10,7 +10,27 @@ const productListInclude = {
   images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
   shop: { select: { name: true, slug: true } },
   category: { select: { name: true, slug: true } },
+  // Lightweight variant data so listing cards can add to cart / show stock
+  variants: {
+    select: { id: true, size: true, color: true, stockQty: true, priceOverride: true },
+  },
 };
+
+const PUBLIC_SCOPE: Prisma.ProductWhereInput = {
+  isActive: true,
+  shop: { status: 'ACTIVE' },
+};
+
+/** Fetch products by id, preserving the given order. */
+async function productsInOrder(ids: string[]) {
+  if (!ids.length) return [];
+  const rows = await prisma.product.findMany({
+    where: { id: { in: ids }, ...PUBLIC_SCOPE },
+    include: productListInclude,
+  });
+  const rank = new Map(ids.map((id, i) => [id, i]));
+  return rows.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+}
 
 /** Category filter that includes the category's subcategories. */
 async function categoryScope(slug: string): Promise<Prisma.ProductWhereInput> {
@@ -201,6 +221,115 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
   });
   if (!product) throw new ApiError(404, 'Product not found');
   res.json({ product });
+});
+
+/** Best sellers — ranked by units actually sold (cancelled sub-orders excluded). */
+export const getBestSellers = asyncHandler(async (req, res) => {
+  const take = Math.min(Number(req.query.limit) || 10, 30);
+  const rows = await prisma.orderItem.groupBy({
+    by: ['productId'],
+    where: { subOrder: { status: { not: 'CANCELLED' } } },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: take * 3, // over-fetch: some may be inactive/suspended
+  });
+  const products = (await productsInOrder(rows.map((r) => r.productId))).slice(0, take);
+  const sold = new Map(rows.map((r) => [r.productId, r._sum.quantity ?? 0]));
+  res.json({ products: products.map((p) => ({ ...p, unitsSold: sold.get(p.id) ?? 0 })) });
+});
+
+/** Price drops — biggest percentage discount first. */
+export const getPriceDrops = asyncHandler(async (req, res) => {
+  const take = Math.min(Number(req.query.limit) || 10, 30);
+  const rows = await prisma.product.findMany({
+    where: { ...PUBLIC_SCOPE, salePrice: { not: null } },
+    include: productListInclude,
+    take: 60,
+    orderBy: { updatedAt: 'desc' },
+  });
+  const withDiscount = rows
+    .map((p) => {
+      const base = Number(p.basePrice);
+      const sale = Number(p.salePrice);
+      return { product: p, pct: base > 0 ? (base - sale) / base : 0 };
+    })
+    .filter((x) => x.pct > 0)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, take);
+  res.json({
+    products: withDiscount.map((x) => ({ ...x.product, discountPct: Math.round(x.pct * 100) })),
+  });
+});
+
+/** Related products: "customers also bought" from real basket co-occurrence,
+ *  topped up with same-category items when there isn't enough order history. */
+export const getRelatedProducts = asyncHandler(async (req, res) => {
+  const take = Math.min(Number(req.query.limit) || 8, 20);
+  const product = await prisma.product.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, categoryId: true, shopId: true },
+  });
+  if (!product) throw new ApiError(404, 'Product not found');
+
+  // Orders that contained this product
+  const containing = await prisma.orderItem.findMany({
+    where: { productId: product.id },
+    select: { subOrder: { select: { orderId: true } } },
+    take: 300,
+  });
+  const orderIds = [...new Set(containing.map((c) => c.subOrder.orderId))];
+
+  let ids: string[] = [];
+  if (orderIds.length) {
+    const co = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      where: { subOrder: { orderId: { in: orderIds } }, productId: { not: product.id } },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: take * 2,
+    });
+    ids = co.map((c) => c.productId);
+  }
+
+  let products = await productsInOrder(ids);
+
+  // Degrade gracefully so the row is never empty: same category -> same shop ->
+  // top rated overall. Products can legitimately have no category (a category
+  // may have been deleted), so category alone is not a safe fallback.
+  const fallbacks: Prisma.ProductWhereInput[] = [
+    ...(product.categoryId ? [{ categoryId: product.categoryId }] : []),
+    { shopId: product.shopId },
+    {},
+  ];
+
+  for (const scope of fallbacks) {
+    if (products.length >= take) break;
+    const exclude = [product.id, ...products.map((p) => p.id)];
+    const fill = await prisma.product.findMany({
+      where: { ...PUBLIC_SCOPE, ...scope, id: { notIn: exclude } },
+      include: productListInclude,
+      take: take - products.length,
+      orderBy: [{ ratingAvg: 'desc' }, { createdAt: 'desc' }],
+    });
+    products = [...products, ...fill];
+  }
+
+  res.json({ products: products.slice(0, take) });
+});
+
+/** Brands with product counts — powers brand landing pages and the brand index. */
+export const listBrands = asyncHandler(async (_req, res) => {
+  const rows = await prisma.product.groupBy({
+    by: ['brand'],
+    where: { ...PUBLIC_SCOPE, brand: { not: null } },
+    _count: { _all: true },
+    orderBy: { _count: { brand: 'desc' } },
+  });
+  res.json({
+    brands: rows
+      .filter((r) => r.brand)
+      .map((r) => ({ name: r.brand as string, count: r._count._all })),
+  });
 });
 
 // ---- Vendor ----

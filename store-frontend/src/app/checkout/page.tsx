@@ -217,6 +217,9 @@ export default function CheckoutPage() {
               <span className="text-sm font-medium">{t('checkout.phone')}</span>
               <input
                 required
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 className="input"
                 placeholder="01XXXXXXXXX"
                 value={form.phone}
