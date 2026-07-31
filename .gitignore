@@ -33,3 +33,6 @@ pgdata/
 # Locally stored uploads (dev fallback when Cloudinary isn't configured)
 uploads/
 api/uploads/
+
+# Claude Code: share project settings, keep personal overrides local
+.claude/settings.local.json
