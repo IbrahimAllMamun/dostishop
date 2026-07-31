@@ -68,21 +68,21 @@ export function CardActions({ product }: { product: Product }) {
 
   return (
     <>
-      {/* Wishlist heart — overlays the image */}
+      {/* Wishlist heart — top-right of the image */}
       <button
         onClick={onWish}
         aria-label={saved ? t('card.saved') : t('card.save')}
         aria-pressed={saved}
-        className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-surface/85 text-lg backdrop-blur transition hover:bg-surface"
+        className="absolute right-1.5 top-1.5 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-surface/85 text-base backdrop-blur transition hover:bg-surface"
       >
         <span className={saved ? 'text-sale' : 'text-ink/40'}>{saved ? '♥' : '♡'}</span>
       </button>
 
-      {/* Add to cart / choose options */}
+      {/* Add to cart / choose options — compact pill along the bottom of the image */}
       <button
         onClick={onAdd}
         disabled={!inStock}
-        className="absolute inset-x-2 bottom-2 z-10 min-h-11 rounded-full bg-ink/90 px-3 text-xs font-medium text-white opacity-0 backdrop-blur transition hover:bg-primary focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:bg-ink/40 max-sm:opacity-100"
+        className="absolute inset-x-1.5 bottom-1.5 z-20 flex h-8 items-center justify-center truncate rounded-full bg-ink/90 px-2 text-[11px] font-medium leading-none text-white opacity-0 backdrop-blur transition hover:bg-primary focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:bg-ink/40 max-sm:opacity-100"
       >
         {!inStock
           ? t('card.soldOut')
