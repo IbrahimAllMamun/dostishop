@@ -139,7 +139,7 @@ export interface Order {
   address?: string;
   city?: string;
   zone?: string;
-  discount?: Money | null;
+  discountTotal?: Money | null;
   grandTotal: Money;
   paymentMethod: string;
   createdAt: string;

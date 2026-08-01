@@ -122,10 +122,10 @@ export function AdminOrderDetail() {
           <div className="card p-5">
             <h2 className="mb-3 font-semibold">Totals</h2>
             <div className="space-y-1 text-sm">
-              {order.discount != null && Number(order.discount) > 0 && (
+              {order.discountTotal != null && Number(order.discountTotal) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Discount</span>
-                  <span>−{formatTk(order.discount)}</span>
+                  <span>−{formatTk(order.discountTotal)}</span>
                 </div>
               )}
               <div className="flex justify-between font-semibold">

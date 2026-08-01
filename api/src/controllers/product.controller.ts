@@ -497,6 +497,12 @@ export const updateProduct = asyncHandler(async (req, res) => {
   const { name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images, variants } =
     req.body;
 
+  // Resolved BEFORE the transaction opens. It is a plain read, and running it
+  // inside the callback issued a query on the global client while the
+  // transaction held a connection — against a remote database that reliably
+  // blew Prisma's 5s interactive-transaction timeout.
+  const valueMap = await loadAttributeValues((variants ?? []) as VariantInput[]);
+
   const product = await prisma.$transaction(async (tx) => {
     const data: Prisma.ProductUpdateInput = {
       description,
@@ -547,8 +553,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
         await tx.productVariant.deleteMany({ where: { id: { in: removeIds } } });
       }
 
-      const valueMap = await loadAttributeValues(incoming);
-
       for (const v of incoming) {
         const { size, color } = denormalise(v, valueMap);
         let variantId: string;
@@ -596,10 +600,16 @@ export const updateProduct = asyncHandler(async (req, res) => {
     return tx.product.findUniqueOrThrow({
       where: { id: existing.id },
       include: {
-      images: { orderBy: { sortOrder: 'asc' } },
-      variants: { include: { attributes: { select: { valueId: true } } } },
-    },
+        images: { orderBy: { sortOrder: 'asc' } },
+        variants: { include: { attributes: { select: { valueId: true } } } },
+      },
     });
+  },
+  {
+    // A product with several variants issues a dozen sequential round trips,
+    // and the database is remote. Prisma's 5s default is not enough headroom.
+    timeout: 20_000,
+    maxWait: 10_000,
   });
 
   res.json({ product });
