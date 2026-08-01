@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
+import { TableSkeleton } from '@/components/Skeleton';
 import { formatTk } from '@/lib/format';
 import type { Shop } from '@/lib/types';
 
@@ -79,11 +80,7 @@ export function AdminShops() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={5}>
-                  Loading…
-                </td>
-              </tr>
+              <TableSkeleton cols={5} />
             ) : shops.length === 0 ? (
               <tr>
                 <td className="td text-muted-foreground" colSpan={5}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatCard } from '@/components/StatCard';
+import { StatsSkeleton, TableSkeleton } from '@/components/Skeleton';
 import { formatTk } from '@/lib/format';
 import type { Order, Shop } from '@/lib/types';
 
@@ -29,19 +30,30 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Overview</h1>
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <>
+          <StatsSkeleton />
+          <div className="card overflow-hidden">
+            <div className="border-b border-ink/5 px-4 py-3 font-semibold">Recent orders</div>
+            <table className="w-full">
+              <tbody>
+                <TableSkeleton cols={4} />
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total orders" value={orders.length} tone="primary" />
-            <StatCard label="Gross sales" value={formatTk(revenue)} tone="success" />
+            <StatCard label="Total orders" value={orders.length} tone="primary" index={0} />
+            <StatCard label="Gross sales" value={formatTk(revenue)} tone="success" index={1} />
             <StatCard
               label="Pending approvals"
               value={pendingShops}
               tone={pendingShops ? 'warn' : 'default'}
               hint="Shops awaiting review"
+              index={2}
             />
-            <StatCard label="Active shops" value={activeShops} />
+            <StatCard label="Active shops" value={activeShops} index={3} />
           </div>
 
           <div className="card overflow-hidden">
@@ -58,7 +70,10 @@ export function AdminDashboard() {
                 </thead>
                 <tbody>
                   {orders.slice(0, 8).map((o) => (
-                    <tr key={o.id} className="border-b border-ink/5 last:border-0">
+                    <tr
+                      key={o.id}
+                      className="border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60"
+                    >
                       <td className="td font-medium">{o.orderNo}</td>
                       <td className="td">{o.customerName}</td>
                       <td className="td">{o.subOrders.length}</td>

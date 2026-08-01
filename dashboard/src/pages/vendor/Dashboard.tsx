@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatCard } from '@/components/StatCard';
+import { StatsSkeleton } from '@/components/Skeleton';
 import { formatTk } from '@/lib/format';
 import type { Product, SubOrder } from '@/lib/types';
 
@@ -44,14 +45,30 @@ export function VendorDashboard() {
       )}
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <StatsSkeleton />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Products" value={products.length} tone="primary" />
-            <StatCard label="New orders" value={pending} tone={pending ? 'warn' : 'default'} />
-            <StatCard label="Est. payout" value={formatTk(payout)} tone="success" hint="After commission" />
-            <StatCard label="Low stock" value={lowStock} tone={lowStock ? 'warn' : 'default'} />
+            <StatCard label="Products" value={products.length} tone="primary" index={0} />
+            <StatCard
+              label="New orders"
+              value={pending}
+              tone={pending ? 'warn' : 'default'}
+              index={1}
+            />
+            <StatCard
+              label="Est. payout"
+              value={formatTk(payout)}
+              tone="success"
+              hint="After commission"
+              index={2}
+            />
+            <StatCard
+              label="Low stock"
+              value={lowStock}
+              tone={lowStock ? 'warn' : 'default'}
+              index={3}
+            />
           </div>
 
           <div className="flex gap-3">

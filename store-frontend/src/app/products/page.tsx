@@ -163,8 +163,16 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {products.map((p, i) => (
+                // Capped stagger: 40ms/item up to 8 items, so the last card never
+                // waits longer than ~320ms on a full page of results.
+                <div
+                  key={p.id}
+                  className="animate-fade-up"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                >
+                  <ProductCard product={p} />
+                </div>
               ))}
             </div>
           )}

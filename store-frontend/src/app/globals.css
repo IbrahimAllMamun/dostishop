@@ -12,15 +12,57 @@ body {
   color: #22201e;
 }
 
+/* Accessibility: honour the OS motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scroll-reveal start state. Overridden below whenever motion is unwanted or
+   unavailable, so content is never left permanently invisible. */
+.reveal {
+  opacity: 0;
+}
+.reveal.animate-fade-up {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Consistent keyboard focus on every interactive element. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #a24b5f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @layer components {
   .container-x {
     @apply mx-auto w-full max-w-content px-4 sm:px-6;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-white shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-primary-dark hover:shadow-float active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-outline {
-    @apply inline-flex items-center justify-center rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition hover:border-ink;
+    @apply inline-flex items-center justify-center rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition-[border-color,transform,background-color] duration-200 ease-out hover:border-ink hover:bg-ink/5 active:scale-[0.97];
+  }
+  /* Skeleton block with a sweeping highlight — used by route-level loading UI */
+  .skeleton {
+    @apply relative overflow-hidden rounded-xl bg-sand/70;
+  }
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 to-transparent;
+    content: '';
   }
   .input {
     @apply w-full rounded-xl border border-ink/15 bg-surface px-4 py-3 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
+import { TableSkeleton } from '@/components/Skeleton';
 import { formatTk, formatDate } from '@/lib/format';
 import type { Order } from '@/lib/types';
 
@@ -33,11 +34,7 @@ export function AdminOrders() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={6}>
-                  Loading…
-                </td>
-              </tr>
+              <TableSkeleton cols={6} />
             ) : orders.length === 0 ? (
               <tr>
                 <td className="td text-muted-foreground" colSpan={6}>
@@ -46,7 +43,10 @@ export function AdminOrders() {
               </tr>
             ) : (
               orders.map((o) => (
-                <tr key={o.id} className="border-b border-ink/5 align-top last:border-0">
+                <tr
+                  key={o.id}
+                  className="border-b border-ink/5 align-top transition-colors duration-150 last:border-0 hover:bg-muted/60"
+                >
                   <td className="td font-medium">{o.orderNo}</td>
                   <td className="td whitespace-nowrap text-muted-foreground">{formatDate(o.createdAt)}</td>
                   <td className="td">

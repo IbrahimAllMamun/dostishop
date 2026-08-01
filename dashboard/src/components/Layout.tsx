@@ -52,8 +52,10 @@ export function Layout() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm transition ${
-                  isActive ? 'bg-primary text-white' : 'text-white/70 hover:bg-white/10'
+                `relative rounded-lg px-3 py-2 text-sm transition-[background-color,color,transform] duration-200 ease-out active:scale-[0.98] ${
+                  isActive
+                    ? 'bg-primary text-white shadow-lift'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`
               }
             >

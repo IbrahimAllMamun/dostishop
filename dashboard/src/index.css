@@ -49,6 +49,25 @@ body,
   height: 100%;
 }
 
+/* Accessibility: honour the OS motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Consistent keyboard focus on every interactive element. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 body {
   @apply bg-canvas text-ink;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
@@ -60,10 +79,18 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-dark;
+    @apply btn bg-primary text-white shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-primary-dark hover:shadow-float active:scale-[0.97] disabled:active:scale-100;
   }
   .btn-ghost {
-    @apply btn border border-ink/15 text-ink hover:border-ink;
+    @apply btn border border-ink/15 text-ink transition-[border-color,background-color,transform] duration-200 ease-out hover:border-ink hover:bg-ink/5 active:scale-[0.97];
+  }
+  /* Skeleton block with a sweeping highlight — replaces "Loading…" text */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent;
+    content: '';
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;

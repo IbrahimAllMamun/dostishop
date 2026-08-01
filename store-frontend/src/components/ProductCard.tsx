@@ -17,14 +17,14 @@ export function ProductCard({ product }: { product: Product }) {
     <div className="group">
       {/* Image box is its own positioning context so the overlay controls
           (wishlist, add-to-cart) sit inside the image, not below the card. */}
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-sand">
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-sand transition-[transform,box-shadow] duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-lift">
         {img && (
           <Image
             src={img}
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-            className="object-cover transition duration-300 group-hover:scale-105"
+            className="object-cover transition-transform duration-300 ease-out group-hover:scale-105"
           />
         )}
 
@@ -40,7 +40,10 @@ export function ProductCard({ product }: { product: Product }) {
         <CardActions product={product} />
       </div>
 
-      <Link href={href} className="mt-2 block space-y-0.5">
+      <Link
+        href={href}
+        className="mt-2 block space-y-0.5 transition-colors duration-200 ease-out group-hover:[&_h3]:text-primary"
+      >
         {product.shop && (
           <p className="truncate text-[10px] uppercase tracking-wide text-muted">
             {product.shop.name}

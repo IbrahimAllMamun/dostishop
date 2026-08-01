@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, API_URL } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { formatTk } from '@/lib/format';
+import { TableSkeleton } from '@/components/Skeleton';
 import type { Product } from '@/lib/types';
 
 export function VendorProducts() {
@@ -131,11 +132,7 @@ export function VendorProducts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={5}>
-                  Loading…
-                </td>
-              </tr>
+              <TableSkeleton cols={5} />
             ) : products.length === 0 ? (
               <tr>
                 <td className="td text-muted-foreground" colSpan={5}>
@@ -144,7 +141,10 @@ export function VendorProducts() {
               </tr>
             ) : (
               products.map((p) => (
-                <tr key={p.id} className="border-b border-ink/5 last:border-0">
+                <tr
+                  key={p.id}
+                  className="border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60"
+                >
                   <td className="td">
                     <div className="flex items-center gap-3">
                       {p.images?.[0]?.url && (

@@ -65,6 +65,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} className={`${display.variable} ${sans.variable} ${bangla.variable}`}>
       <body className="flex min-h-screen flex-col font-sans antialiased">
+        {/* Without JS the IntersectionObserver never fires, so unhide everything. */}
+        <noscript>
+          {/* eslint-disable-next-line react/no-danger */}
+          <style dangerouslySetInnerHTML={{ __html: '.reveal{opacity:1!important}' }} />
+        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}

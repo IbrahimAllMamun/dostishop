@@ -61,6 +61,11 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // Layered, colour-tinted shadows (never flat shadow-md)
+      boxShadow: {
+        lift: '0 1px 2px -1px rgb(34 32 30 / 0.10), 0 8px 20px -6px rgb(162 75 95 / 0.16)',
+        float: '0 2px 4px -2px rgb(34 32 30 / 0.10), 0 16px 32px -8px rgb(162 75 95 / 0.20)',
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },
@@ -70,10 +75,20 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'fade-up': {
+          from: { opacity: '0', transform: 'translate3d(0, 10px, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        // Informational UI: plain ease-out, no back.out overshoot on data views
+        'fade-up': 'fade-up 240ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        shimmer: 'shimmer 1.6s infinite',
       },
     },
   },
