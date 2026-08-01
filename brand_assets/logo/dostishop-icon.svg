@@ -1,0 +1,36 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="bagClip2">
+      <polygon points="65,60 135,60 158,175 42,175" />
+    </clipPath>
+    <linearGradient id="orangeGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A3D"/>
+      <stop offset="100%" stop-color="#F2600C"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5F3FF"/>
+      <stop offset="100%" stop-color="#FFF7ED"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="200" height="200" rx="36" fill="url(#bgGrad)"/>
+
+  <path d="M83,60 C83,20 117,20 117,60" fill="none" stroke="#3B0764" stroke-width="12" stroke-linecap="round"/>
+
+  <polygon points="65,60 135,60 158,175 42,175" fill="url(#purpleGrad2)"/>
+  <polygon points="65,60 135,60 73,175 42,175" fill="url(#orangeGrad2)" clip-path="url(#bagClip2)"/>
+  <line x1="135" y1="60" x2="55" y2="175" stroke="#2E1065" stroke-width="3" clip-path="url(#bagClip2)" opacity="0.5"/>
+
+  <g clip-path="url(#bagClip2)">
+    <line x1="92" y1="112" x2="123" y2="100" stroke="#FFFFFF" stroke-width="4" opacity="0.9"/>
+    <line x1="92" y1="112" x2="105" y2="150" stroke="#FFFFFF" stroke-width="4" opacity="0.9"/>
+    <line x1="123" y1="100" x2="105" y2="150" stroke="#FFFFFF" stroke-width="4" opacity="0.9"/>
+    <circle cx="92" cy="112" r="9" fill="#FFFFFF"/>
+    <circle cx="123" cy="100" r="9" fill="#FFFFFF"/>
+    <circle cx="105" cy="150" r="9" fill="#FFFFFF"/>
+  </g>
+</svg>

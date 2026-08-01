@@ -1,0 +1,44 @@
+<svg width="560" height="180" viewBox="0 0 560 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="bagClip">
+      <polygon points="55,55 105,55 122,150 38,150" />
+    </clipPath>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8A3D"/>
+      <stop offset="100%" stop-color="#F2600C"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon group -->
+  <g>
+    <!-- Bag handle -->
+    <path d="M68,55 C68,25 92,25 92,55" fill="none" stroke="#3B0764" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- Bag body: purple base -->
+    <polygon points="55,55 105,55 122,150 38,150" fill="url(#purpleGrad)"/>
+
+    <!-- Orange geometric facet, clipped to bag shape -->
+    <polygon points="55,55 105,55 60,150 38,150" fill="url(#orangeGrad)" clip-path="url(#bagClip)"/>
+
+    <!-- Bold diagonal seam -->
+    <line x1="105" y1="55" x2="45" y2="150" stroke="#2E1065" stroke-width="2.5" clip-path="url(#bagClip)" opacity="0.5"/>
+
+    <!-- Vendor network nodes (multi-vendor motif) -->
+    <g clip-path="url(#bagClip)">
+      <line x1="70" y1="95" x2="95" y2="85" stroke="#FFFFFF" stroke-width="3" opacity="0.9"/>
+      <line x1="70" y1="95" x2="80" y2="125" stroke="#FFFFFF" stroke-width="3" opacity="0.9"/>
+      <line x1="95" y1="85" x2="80" y2="125" stroke="#FFFFFF" stroke-width="3" opacity="0.9"/>
+      <circle cx="70" cy="95" r="7" fill="#FFFFFF"/>
+      <circle cx="95" cy="85" r="7" fill="#FFFFFF"/>
+      <circle cx="80" cy="125" r="7" fill="#FFFFFF"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="150" y="105" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="52" fill="#5B21B6" letter-spacing="0.5">Dosti<tspan fill="#F2600C">Shop</tspan></text>
+  <text x="151" y="130" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="15" fill="#6B7280" letter-spacing="3">MULTI-VENDOR MARKETPLACE</text>
+</svg>
