@@ -7,8 +7,11 @@ import {
   adminListAbandoned,
   adminUpdateAbandoned,
   listMySubOrders,
+  getMySubOrder,
   updateSubOrderStatus,
   adminListOrders,
+  adminGetOrder,
+  adminExportOrders,
 } from '../controllers/order.controller';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
@@ -35,6 +38,7 @@ orderRouter.get('/track', trackOrder);
 
 // Vendor
 orderRouter.get('/vendor/mine', authenticate, authorize('VENDOR'), listMySubOrders);
+orderRouter.get('/vendor/suborders/:id', authenticate, authorize('VENDOR'), getMySubOrder);
 orderRouter.patch(
   '/vendor/suborders/:id',
   authenticate,
@@ -45,5 +49,8 @@ orderRouter.patch(
 
 // Super admin
 orderRouter.get('/admin/all', authenticate, authorize('SUPER_ADMIN'), adminListOrders);
+orderRouter.get('/admin/export', authenticate, authorize('SUPER_ADMIN'), adminExportOrders);
 orderRouter.get('/admin/abandoned', authenticate, authorize('SUPER_ADMIN'), adminListAbandoned);
 orderRouter.patch('/admin/abandoned/:id', authenticate, authorize('SUPER_ADMIN'), adminUpdateAbandoned);
+// Last: `/admin/:id` would otherwise swallow `/admin/all` and `/admin/export`
+orderRouter.get('/admin/:id', authenticate, authorize('SUPER_ADMIN'), adminGetOrder);

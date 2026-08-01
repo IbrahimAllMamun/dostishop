@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
+import { Download } from 'lucide-react';
+import { api, API_URL } from '@/lib/api';
+import { useAuth } from '@/store/auth';
+import { useDialogs } from '@/components/Dialogs';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DataTable, type Column } from '@/components/DataTable';
 import { formatTk, formatDate } from '@/lib/format';
 import type { Order } from '@/lib/types';
 
 export function AdminOrders() {
+  const navigate = useNavigate();
+  const { notify } = useDialogs();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,6 +21,23 @@ export function AdminOrders() {
       .then((d) => setOrders(d.orders))
       .finally(() => setLoading(false));
   }, []);
+
+  async function exportCsv() {
+    const token = useAuth.getState().token;
+    const res = await fetch(`${API_URL}/orders/admin/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      await notify({ title: 'Export failed', description: 'Please try again.', tone: 'danger' });
+      return;
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'orders.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const columns: Column<Order>[] = [
     {
@@ -85,6 +108,12 @@ export function AdminOrders() {
         rows={orders}
         getRowId={(o) => o.id}
         loading={loading}
+        onRowClick={(o) => navigate(`/admin/orders/${o.id}`)}
+        toolbar={
+          <button onClick={exportCsv} className="btn-ghost btn-sm">
+            <Download className="h-3.5 w-3.5" /> Export all orders
+          </button>
+        }
         searchPlaceholder="Search by order no, name or phone…"
         empty="No orders yet."
         initialPageSize={25}

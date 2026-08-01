@@ -24,6 +24,8 @@ import { VendorOrders } from '@/pages/vendor/Orders';
 import { VendorAnalytics } from '@/pages/vendor/Analytics';
 import { ShopProfile } from '@/pages/vendor/ShopProfile';
 import { Attributes } from '@/pages/Attributes';
+import { AdminOrderDetail } from '@/pages/admin/OrderDetail';
+import { VendorOrderDetail } from '@/pages/vendor/OrderDetail';
 
 function HomeRedirect() {
   const user = useAuth((s) => s.user);
@@ -58,6 +60,7 @@ export function App() {
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           </Route>
 
           {/* Vendor */}
@@ -73,6 +76,7 @@ export function App() {
             <Route path="/vendor/products/new" element={<ProductForm />} />
             <Route path="/vendor/products/:id/edit" element={<ProductForm />} />
             <Route path="/vendor/orders" element={<VendorOrders />} />
+            <Route path="/vendor/orders/:id" element={<VendorOrderDetail />} />
             <Route path="/vendor/analytics" element={<VendorAnalytics />} />
             <Route path="/vendor/payouts" element={<VendorPayouts />} />
             <Route path="/vendor/categories" element={<VendorCategories />} />

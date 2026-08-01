@@ -108,7 +108,7 @@ export function AdminBanners() {
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     onClick={() => toggle(b)}
-                    className={`badge ${b.isActive ? 'bg-success/15 text-success' : 'bg-ink/10'}`}
+                    className={b.isActive ? 'badge-success' : 'badge-neutral'}
                   >
                     {b.isActive ? 'Active' : 'Hidden'}
                   </button>

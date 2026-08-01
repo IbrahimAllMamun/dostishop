@@ -93,7 +93,7 @@ export function AdminReviews() {
                 <span className="font-medium">{r.customerName}</span>
                 <span className="text-xs text-muted-foreground">{r.phone}</span>
                 {r.isVerified && (
-                  <span className="badge bg-success/15 text-success">✓ Verified</span>
+                  <span className="badge-success">✓ Verified</span>
                 )}
                 <StatusBadge status={r.status} />
                 <span className="ml-auto text-xs text-muted-foreground">{formatDate(r.createdAt)}</span>

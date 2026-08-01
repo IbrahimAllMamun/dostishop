@@ -158,6 +158,11 @@ export const checkout = asyncHandler(async (req, res) => {
         },
       });
 
+      // First entry in the tracking history. System-generated, so no author.
+      await tx.subOrderEvent.create({
+        data: { subOrderId: subOrder.id, status: 'PENDING', note: 'Order placed' },
+      });
+
       for (const l of lines) {
         await tx.orderItem.create({
           data: {
@@ -300,6 +305,41 @@ export const listMySubOrders = asyncHandler(async (req, res) => {
   res.json({ subOrders });
 });
 
+/** Everything the detail page and the tracking timeline need. */
+const subOrderDetailInclude = {
+  items: true,
+  shop: { select: { id: true, name: true, slug: true, phone: true } },
+  order: {
+    select: {
+      id: true,
+      orderNo: true,
+      customerName: true,
+      phone: true,
+      address: true,
+      city: true,
+      zone: true,
+      paymentMethod: true,
+      grandTotal: true,
+      discount: true,
+      createdAt: true,
+    },
+  },
+  events: { orderBy: { createdAt: 'asc' as const } },
+};
+
+export const getMySubOrder = asyncHandler(async (req, res) => {
+  const shop = await prisma.shop.findUnique({ where: { ownerId: req.user!.sub } });
+  if (!shop) throw new ApiError(404, 'Shop not found');
+
+  // Scoped by shopId, not just id — vendor isolation is a security boundary
+  const subOrder = await prisma.subOrder.findFirst({
+    where: { id: req.params.id, shopId: shop.id },
+    include: subOrderDetailInclude,
+  });
+  if (!subOrder) throw new ApiError(404, 'Sub-order not found');
+  res.json({ subOrder });
+});
+
 export const updateSubOrderStatus = asyncHandler(async (req, res) => {
   const shop = await prisma.shop.findUnique({ where: { ownerId: req.user!.sub } });
   if (!shop) throw new ApiError(404, 'Shop not found');
@@ -307,11 +347,28 @@ export const updateSubOrderStatus = asyncHandler(async (req, res) => {
   const subOrder = await prisma.subOrder.findUnique({ where: { id: req.params.id } });
   if (!subOrder || subOrder.shopId !== shop.id) throw new ApiError(404, 'Sub-order not found');
 
-  const { status, trackingNo, paymentStatus } = req.body;
-  const updated = await prisma.subOrder.update({
-    where: { id: subOrder.id },
-    data: { status, trackingNo, paymentStatus },
+  const { status, trackingNo, paymentStatus, note } = req.body;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.subOrder.update({
+      where: { id: subOrder.id },
+      data: { status, trackingNo, paymentStatus },
+    });
+    // Only a real status transition is history. Saving a tracking number or
+    // flipping payment state is not a step in the customer's journey.
+    if (status && status !== subOrder.status) {
+      await tx.subOrderEvent.create({
+        data: {
+          subOrderId: subOrder.id,
+          status,
+          note: note ?? null,
+          createdById: req.user!.sub,
+        },
+      });
+    }
+    return next;
   });
+
   res.json({ subOrder: updated });
 });
 
@@ -326,4 +383,84 @@ export const adminListOrders = asyncHandler(async (_req, res) => {
     take: 100,
   });
   res.json({ orders });
+});
+
+export const adminGetOrder = asyncHandler(async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: {
+      subOrders: {
+        include: {
+          items: true,
+          shop: { select: { id: true, name: true, slug: true, phone: true } },
+          events: { orderBy: { createdAt: 'asc' } },
+        },
+      },
+    },
+  });
+  if (!order) throw new ApiError(404, 'Order not found');
+  res.json({ order });
+});
+
+/** Minimal CSV writer: quote everything, double embedded quotes. */
+function csvRow(cells: Array<string | number | null | undefined>) {
+  return cells.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',');
+}
+
+export const adminExportOrders = asyncHandler(async (_req, res) => {
+  const orders = await prisma.order.findMany({
+    include: { subOrders: { include: { shop: { select: { name: true } } } } },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // One row per sub-order: that is the unit a shop actually fulfils.
+  const rows = [
+    csvRow([
+      'Order No',
+      'Placed',
+      'Customer',
+      'Phone',
+      'Address',
+      'City',
+      'Zone',
+      'Payment',
+      'Shop',
+      'Status',
+      'Payment status',
+      'Subtotal',
+      'Shipping',
+      'Commission',
+      'Vendor payout',
+      'Tracking',
+    ]),
+  ];
+  for (const o of orders) {
+    for (const s of o.subOrders) {
+      rows.push(
+        csvRow([
+          o.orderNo,
+          o.createdAt.toISOString(),
+          o.customerName,
+          o.phone,
+          o.address,
+          o.city,
+          o.zone,
+          o.paymentMethod,
+          s.shop?.name,
+          s.status,
+          s.paymentStatus,
+          Number(s.subtotal),
+          Number(s.shippingCost),
+          Number(s.commissionAmount),
+          Number(s.vendorPayout),
+          s.trackingNo,
+        ]),
+      );
+    }
+  }
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="orders.csv"');
+  // BOM so Excel opens the Bangla text and ৳ correctly
+  res.send('﻿' + rows.join('\n'));
 });

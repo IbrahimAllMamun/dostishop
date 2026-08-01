@@ -186,7 +186,7 @@ export function DialogsProvider({ children }: { children: React.ReactNode }) {
                   <span
                     aria-hidden
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
-                      danger ? 'bg-sale/10 text-sale' : 'bg-primary/10 text-primary'
+                      danger ? 'bg-sale/10 text-sale-strong' : 'bg-primary/10 text-primary-strong'
                     }`}
                   >
                     <Icon className="h-5 w-5" />

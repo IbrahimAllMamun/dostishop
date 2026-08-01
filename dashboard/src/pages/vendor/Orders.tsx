@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -117,7 +118,7 @@ export function VendorOrders() {
       </div>
 
       {tab === 'PENDING' && subOrders.length > 0 && (
-        <div className="rounded-xl bg-gold/15 px-4 py-3 text-sm text-warn">
+        <div className="rounded-xl bg-gold/15 px-4 py-3 text-sm text-warn-strong">
           These orders are waiting for a confirmation call. Call the customer, then set the status
           to CONFIRMED (or CANCELLED if unreachable/fake).
         </div>
@@ -136,7 +137,12 @@ export function VendorOrders() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">{s.order?.orderNo}</span>
+                    <Link
+                      to={`/vendor/orders/${s.id}`}
+                      className="font-semibold transition-colors duration-200 hover:text-primary hover:underline"
+                    >
+                      {s.order?.orderNo}
+                    </Link>
                     <StatusBadge status={s.status} />
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -200,12 +206,14 @@ export function VendorOrders() {
                     if (e.target.value !== (s.trackingNo ?? '')) saveTracking(s.id, e.target.value);
                   }}
                 />
-                <button
-                  onClick={() => printInvoice(s, shopName)}
-                  className="btn-ghost btn-sm ml-auto"
-                >
-                  🖨 Invoice
-                </button>
+                <div className="ml-auto flex gap-2">
+                  <Link to={`/vendor/orders/${s.id}`} className="btn-ghost btn-sm">
+                    Details
+                  </Link>
+                  <button onClick={() => printInvoice(s, shopName)} className="btn-ghost btn-sm">
+                    🖨 Invoice
+                  </button>
+                </div>
               </div>
             </div>
           ))}

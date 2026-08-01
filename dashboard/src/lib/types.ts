@@ -97,9 +97,19 @@ export interface OrderItem {
   lineTotal: Money;
 }
 
+export interface SubOrderEvent {
+  id: string;
+  subOrderId: string;
+  status: string;
+  note?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+}
+
 export interface SubOrder {
   id: string;
   status: string;
+  events?: SubOrderEvent[];
   paymentStatus: string;
   subtotal: Money;
   shippingCost: Money;
@@ -126,10 +136,15 @@ export interface Order {
   orderNo: string;
   customerName: string;
   phone: string;
+  address?: string;
+  city?: string;
+  zone?: string;
+  discount?: Money | null;
   grandTotal: Money;
   paymentMethod: string;
   createdAt: string;
-  subOrders: Array<{ id: string; status: string; shop?: { name: string } }>;
+  /** The list endpoint returns a thin shape; the detail endpoint fills it in */
+  subOrders: SubOrder[];
 }
 
 export interface Banner {

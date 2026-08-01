@@ -184,7 +184,7 @@ export function AdminCategories() {
             ) : (
               <span
                 title="A vendor added this and can still rename or delete it. Editing it here takes it over."
-                className="badge bg-gold/15 text-warn"
+                className="badge-warn"
               >
                 Vendor-added
               </span>

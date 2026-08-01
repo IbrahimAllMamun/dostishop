@@ -45,6 +45,8 @@ export const subOrderStatusSchema = z
       .optional(),
     paymentStatus: z.enum(['UNPAID', 'PAID', 'REFUNDED']).optional(),
     trackingNo: z.string().optional(),
+    /** Recorded on the status event, shown in the tracking timeline */
+    note: z.string().max(200).optional(),
   })
   .refine((v) => v.status || v.paymentStatus || v.trackingNo, {
     message: 'Provide at least one field to update',
