@@ -9,20 +9,53 @@ import { Prisma } from '@prisma/client';
 const RANGES = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 } as const;
 type RangeKey = keyof typeof RANGES;
 
+/**
+ * A "day" here is a Bangladesh day, not the server's day.
+ *
+ * Production runs on Render in UTC while development runs at UTC+6, so
+ * server-local bucketing would put the day boundary in a different place in
+ * each environment — and in neither case where a Dhaka seller expects it.
+ * Asia/Dhaka is UTC+6 year-round with no DST, so the fixed offset is safe.
+ */
+const BIZ_OFFSET = '+06:00';
+const DAY_PARTS = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Dhaka',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** YYYY-MM-DD for an instant, in the marketplace's timezone. */
+function dayKey(d: Date): string {
+  const p = Object.fromEntries(DAY_PARTS.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** Shift a YYYY-MM-DD key by n days. Pure date arithmetic, no timezone. */
+function shiftKey(key: string, n: number): string {
+  const d = new Date(`${key}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The instant at which a given Dhaka day begins. */
+function startOfDay(key: string): Date {
+  return new Date(`${key}T00:00:00${BIZ_OFFSET}`);
+}
+
 function resolveRange(req: Request) {
   const raw = req.query.range as string | undefined;
   const key: RangeKey = raw && raw in RANGES ? (raw as RangeKey) : '30d';
   const days = RANGES[key];
 
-  const from = new Date();
-  from.setDate(from.getDate() - (days - 1));
-  from.setHours(0, 0, 0, 0);
+  // Anchored on today's Dhaka date so the last bucket is always today
+  const firstKey = shiftKey(dayKey(new Date()), -(days - 1));
+  const from = startOfDay(firstKey);
 
   // The equally long window immediately before `from`, for trend deltas
-  const previousFrom = new Date(from);
-  previousFrom.setDate(previousFrom.getDate() - days);
+  const previousFrom = startOfDay(shiftKey(firstKey, -days));
 
-  return { key, days, from, previousFrom };
+  return { key, days, from, previousFrom, firstKey };
 }
 
 /** Percentage change. `null` means there is no basis to compare against. */
@@ -32,12 +65,10 @@ function trend(current: number, previous: number): number | null {
 }
 
 /** Zero-filled daily buckets so a chart never has gaps in its x-axis. */
-function dailyBuckets(from: Date, days: number) {
+function dailyBuckets(firstKey: string, days: number) {
   const buckets = new Map<string, { revenue: number; orders: number }>();
   for (let i = 0; i < days; i++) {
-    const d = new Date(from);
-    d.setDate(from.getDate() + i);
-    buckets.set(d.toISOString().slice(0, 10), { revenue: 0, orders: 0 });
+    buckets.set(shiftKey(firstKey, i), { revenue: 0, orders: 0 });
   }
   return buckets;
 }
@@ -50,7 +81,7 @@ export const vendorAnalytics = asyncHandler(async (req, res) => {
   const shop = await prisma.shop.findUnique({ where: { ownerId: req.user!.sub } });
   if (!shop) throw new ApiError(404, 'Shop not found');
 
-  const { key, days, from, previousFrom } = resolveRange(req);
+  const { key, days, from, previousFrom, firstKey } = resolveRange(req);
   const scope = { shopId: shop.id, ...EARNED };
 
   const [totals, previous, byStatus, recent, topItems] = await Promise.all([
@@ -78,9 +109,9 @@ export const vendorAnalytics = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const buckets = dailyBuckets(from, days);
+  const buckets = dailyBuckets(firstKey, days);
   for (const s of recent) {
-    const b = buckets.get(s.createdAt.toISOString().slice(0, 10));
+    const b = buckets.get(dayKey(s.createdAt));
     if (b) {
       b.revenue = round2(b.revenue + Number(s.subtotal));
       b.orders += 1;
@@ -116,7 +147,7 @@ export const vendorAnalytics = asyncHandler(async (req, res) => {
 });
 
 export const adminAnalytics = asyncHandler(async (req, res) => {
-  const { key, days, from, previousFrom } = resolveRange(req);
+  const { key, days, from, previousFrom, firstKey } = resolveRange(req);
 
   const [totals, previous, recent, topItems, byShop, shopCounts, orderRows, itemRows] =
     await Promise.all([
@@ -165,9 +196,9 @@ export const adminAnalytics = asyncHandler(async (req, res) => {
       }),
     ]);
 
-  const buckets = dailyBuckets(from, days);
+  const buckets = dailyBuckets(firstKey, days);
   for (const s of recent) {
-    const b = buckets.get(s.createdAt.toISOString().slice(0, 10));
+    const b = buckets.get(dayKey(s.createdAt));
     if (b) {
       b.revenue = round2(b.revenue + Number(s.subtotal));
       b.orders += 1;

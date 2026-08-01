@@ -22,9 +22,6 @@ export function RevenueChart({
   data: Array<{ date: string; revenue: number }>;
   height?: number;
 }) {
-  // A long window would collide date labels; show roughly a dozen
-  const tickGap = Math.max(1, Math.ceil(data.length / 12));
-
   return (
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -39,9 +36,12 @@ export function RevenueChart({
           <XAxis
             dataKey="date"
             {...AXIS}
-            interval={tickGap - 1}
+            // `preserveStartEnd` keeps the newest day labelled. A fixed stride
+            // silently dropped it whenever the window length was not a
+            // multiple of the stride — so "today" had no tick.
+            interval="preserveStartEnd"
             tickFormatter={dayLabel}
-            minTickGap={16}
+            minTickGap={24}
           />
           <YAxis
             {...AXIS}
