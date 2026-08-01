@@ -51,6 +51,46 @@ export function matching(variants: Variant[], picked: Record<string, string>): V
 }
 
 /**
+ * Choosing a value adopts a whole variant, rather than changing one axis and
+ * hoping the result exists.
+ *
+ * Real catalogues are sparse — three variants can span three attributes with
+ * no shared axis at all. Holding the other picks fixed would then make every
+ * neighbouring combination invalid and strand the shopper on whichever variant
+ * loaded first. So: take the in-stock variant carrying this value that agrees
+ * with the most of the current selection, and adopt all of its values.
+ */
+export function pickValue(
+  variants: Variant[],
+  groups: AttributeGroup[],
+  picked: Record<string, string>,
+  slug: string,
+  value: string,
+): Record<string, string> {
+  const carriers = variants.filter((v) => valueFor(v, slug) === value);
+  const inStock = carriers.filter((v) => v.stockQty > 0);
+  const pool = inStock.length ? inStock : carriers;
+  if (!pool.length) return { ...picked, [slug]: value };
+
+  let best = pool[0];
+  let bestScore = -1;
+  for (const v of pool) {
+    const score = groups.reduce(
+      (n, g) =>
+        g.slug !== slug && picked[g.slug] && valueFor(v, g.slug) === picked[g.slug] ? n + 1 : n,
+      0,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      best = v;
+    }
+  }
+  return Object.fromEntries(
+    (best.attributes ?? []).map((a) => [a.value.attribute.slug, a.value.value]),
+  );
+}
+
+/**
  * Resolve picks to a single variant. Returns null while the choice is still
  * ambiguous, so the caller can keep the add-to-cart button disabled.
  */
@@ -70,29 +110,35 @@ export function VariantPicker({
   groups,
   picked,
   onPick,
-  optionsLabel,
 }: {
   variants: Variant[];
   groups: AttributeGroup[];
   picked: Record<string, string>;
-  onPick: (slug: string, value: string) => void;
-  /** Fallback heading when there is only one attribute to choose */
-  optionsLabel: string;
+  /** Receives the complete next selection, already repaired to a real variant. */
+  onPick: (next: Record<string, string>) => void;
 }) {
   const choices = useMemo(() => choiceGroups(groups), [groups]);
   const fixed = useMemo(() => fixedGroups(groups), [groups]);
 
-  /** A value is unavailable when no in-stock variant survives choosing it. */
+  /**
+   * A value is offered when some in-stock variant carries it at all — not only
+   * when it fits alongside the current picks. Clicking repairs the rest of the
+   * selection, so anything reachable stays clickable.
+   */
   const availability = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const g of choices) {
       for (const value of g.values) {
-        const rest = { ...picked, [g.slug]: value };
-        map.set(`${g.slug}:${value}`, matching(variants, rest).some((v) => v.stockQty > 0));
+        map.set(
+          `${g.slug}:${value}`,
+          variants.some((v) => v.stockQty > 0 && v.attributes?.some(
+            (a) => a.value.attribute.slug === g.slug && a.value.value === value,
+          )),
+        );
       }
     }
     return map;
-  }, [variants, choices, picked]);
+  }, [variants, choices]);
 
   if (!groups.length) return null;
 
@@ -113,7 +159,7 @@ export function VariantPicker({
       {choices.map((g) => (
         <div key={g.slug} className="space-y-2">
           <p className="text-sm font-medium">
-            {choices.length === 1 ? optionsLabel : g.name}
+            {g.name}
             {picked[g.slug] && (
               <span className="ml-1.5 font-normal text-muted">{picked[g.slug]}</span>
             )}
@@ -126,7 +172,7 @@ export function VariantPicker({
                 <button
                   key={value}
                   type="button"
-                  onClick={() => onPick(g.slug, value)}
+                  onClick={() => onPick(pickValue(variants, groups, picked, g.slug, value))}
                   disabled={!available}
                   aria-pressed={selected}
                   className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95 ${

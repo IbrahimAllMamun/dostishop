@@ -153,8 +153,7 @@ export function ProductDetail({ product }: { product: Product }) {
           variants={variants}
           groups={groups}
           picked={picked}
-          onPick={(slug, value) => setPicked((p) => ({ ...p, [slug]: value }))}
-          optionsLabel={t('product.options')}
+          onPick={setPicked}
         />
 
         {/* Quantity */}

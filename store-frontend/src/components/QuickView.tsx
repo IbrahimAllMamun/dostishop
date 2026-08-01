@@ -122,8 +122,7 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
             variants={variants}
             groups={groups}
             picked={picked}
-            onPick={(slug, value) => setPicked((p) => ({ ...p, [slug]: value }))}
-            optionsLabel={t('product.options')}
+            onPick={setPicked}
           />
         </div>
 
