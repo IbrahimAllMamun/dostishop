@@ -3,11 +3,13 @@ import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 import { TableSkeleton } from '@/components/Skeleton';
 import { formatTk } from '@/lib/format';
+import { useDialogs } from '@/components/Dialogs';
 import type { Shop } from '@/lib/types';
 
 const FILTERS = ['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED'] as const;
 
 export function AdminShops() {
+  const { confirm, notify } = useDialogs();
   const [shops, setShops] = useState<Shop[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('ALL');
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,11 @@ export function AdminShops() {
       await api.patch(`/shops/admin/${id}/status`, { status });
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
+      await notify({
+        title: 'Could not change the shop status',
+        description: e instanceof Error ? e.message : 'Failed',
+        tone: 'danger',
+      });
     } finally {
       setBusy(null);
     }
@@ -38,15 +44,28 @@ export function AdminShops() {
 
   async function resetPassword(shop: Shop) {
     if (!shop.owner) return;
-    if (!confirm(`Reset the password for ${shop.owner.email}? A temporary password will be generated.`))
-      return;
+    const ok = await confirm({
+      title: 'Reset this vendor’s password?',
+      description: `${shop.owner.email} will be signed out and can only get back in with the temporary password shown next.`,
+      confirmLabel: 'Reset password',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await api.post<{ tempPassword: string }>('/auth/admin/reset-password', {
         userId: shop.owner.id,
       });
-      prompt('Temporary password (copy and share with the vendor):', res.tempPassword);
+      await notify({
+        title: 'Temporary password',
+        description: `Share this with ${shop.owner.email}. It is shown once — copy it now.`,
+        value: res.tempPassword,
+      });
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
+      await notify({
+        title: 'Could not reset the password',
+        description: e instanceof Error ? e.message : 'Failed',
+        tone: 'danger',
+      });
     }
   }
 

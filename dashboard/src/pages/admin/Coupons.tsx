@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatTk } from '@/lib/format';
+import { useDialogs } from '@/components/Dialogs';
 import type { Coupon } from '@/lib/types';
 
 export function AdminCoupons() {
+  const { confirm } = useDialogs();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,7 +55,13 @@ export function AdminCoupons() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this coupon?')) return;
+    const ok = await confirm({
+      title: 'Delete this coupon?',
+      description: 'Customers who have not checked out yet will stop being able to apply it.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api.del(`/coupons/${id}`);
     setCoupons((cs) => cs.filter((x) => x.id !== id));
   }

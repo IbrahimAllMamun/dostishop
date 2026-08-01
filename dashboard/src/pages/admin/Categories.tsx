@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useDialogs } from '@/components/Dialogs';
 import type { Category } from '@/lib/types';
 
 interface TreeNode extends Category {
@@ -12,6 +14,7 @@ function buildTree(categories: Category[]): TreeNode[] {
 }
 
 export function AdminCategories() {
+  const { confirm, notify, prompt } = useDialogs();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
@@ -52,27 +55,48 @@ export function AdminCategories() {
     }
   }
 
+  async function fail(title: string, err: unknown) {
+    await notify({
+      title,
+      description: err instanceof Error ? err.message : 'Failed',
+      tone: 'danger',
+    });
+  }
+
   async function remove(c: Category, hasChildren: boolean) {
-    const warning = hasChildren
-      ? `Delete "${c.name}"? Its subcategories become top-level categories.`
-      : `Delete "${c.name}"? Products in it keep existing without a category.`;
-    if (!confirm(warning)) return;
+    const ok = await confirm({
+      title: `Delete "${c.name}"?`,
+      description: hasChildren
+        ? 'Its subcategories are promoted to top-level categories. This cannot be undone.'
+        : 'Products filed under it keep existing, just without a category. This cannot be undone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.del(`/categories/${c.id}`);
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed');
+      await fail('Could not delete', err);
     }
   }
 
   async function rename(c: Category) {
-    const newName = prompt('Rename category', c.name);
+    const newName = await prompt({
+      title: 'Rename category',
+      description: c.createdById
+        ? 'This category was added by a vendor — renaming it hands ownership to the platform.'
+        : undefined,
+      label: 'Name',
+      defaultValue: c.name,
+      confirmLabel: 'Rename',
+    });
     if (!newName || newName.trim() === c.name) return;
     try {
       await api.patch(`/categories/${c.id}`, { name: newName.trim() });
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed');
+      await fail('Could not rename', err);
     }
   }
 
@@ -83,7 +107,7 @@ export function AdminCategories() {
       setMoveTarget('');
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed');
+      await fail('Could not move', err);
     }
   }
 
@@ -156,6 +180,22 @@ export function AdminCategories() {
           {depth > 0 && <span className="text-muted-foreground">└</span>}
           <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
           <span className="text-xs text-muted-foreground">/{c.slug}</span>
+          {c.createdById &&
+            (c.adminLocked ? (
+              <span
+                title="You have curated this one — the vendor who added it can no longer change it"
+                className="badge gap-1 bg-muted text-muted-foreground"
+              >
+                <Lock className="h-3 w-3" /> Curated
+              </span>
+            ) : (
+              <span
+                title="A vendor added this and can still rename or delete it. Editing it here takes it over."
+                className="badge bg-gold/15 text-warn"
+              >
+                Vendor-added
+              </span>
+            ))}
         </div>
         <div className="flex items-center gap-3 text-sm">
           {canReparent && (

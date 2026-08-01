@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { ImageUploader } from '@/components/ImageUploader';
+import { useDialogs } from '@/components/Dialogs';
 import type { Banner } from '@/lib/types';
 
 export function AdminBanners() {
+  const { confirm } = useDialogs();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +56,13 @@ export function AdminBanners() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this banner?')) return;
+    const ok = await confirm({
+      title: 'Delete this banner?',
+      description: 'It disappears from the storefront homepage right away.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api.del(`/banners/${id}`);
     setBanners((bs) => bs.filter((x) => x.id !== id));
   }

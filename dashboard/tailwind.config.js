@@ -66,6 +66,11 @@ export default {
         lift: '0 1px 2px -1px rgb(34 32 30 / 0.10), 0 8px 20px -6px rgb(162 75 95 / 0.16)',
         float: '0 2px 4px -2px rgb(34 32 30 / 0.10), 0 16px 32px -8px rgb(162 75 95 / 0.20)',
       },
+      // Named so it can be used as `ease-settle` — the arbitrary-value form
+      // `ease-[cubic-bezier(...)]` is ambiguous to Tailwind and warns at build.
+      transitionTimingFunction: {
+        settle: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },

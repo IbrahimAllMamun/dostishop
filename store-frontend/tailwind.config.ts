@@ -40,6 +40,19 @@ export default {
           from: { opacity: '0', transform: 'scale(0.96)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
+        'fade-out': {
+          from: { opacity: '1' },
+          to: { opacity: '0' },
+        },
+        // Modal panel: rises and settles on enter, drops away faster on exit
+        'sheet-in': {
+          from: { opacity: '0', transform: 'translate3d(0, 14px, 0) scale(0.96)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0) scale(1)' },
+        },
+        'sheet-out': {
+          from: { opacity: '1', transform: 'translate3d(0, 0, 0) scale(1)' },
+          to: { opacity: '0', transform: 'translate3d(0, 6px, 0) scale(0.98)' },
+        },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
@@ -48,7 +61,11 @@ export default {
         // 150-300ms micro-interaction band; ease-out on enter
         'fade-up': 'fade-up 280ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'fade-in': 'fade-in 220ms ease-out both',
+        'fade-out': 'fade-out 150ms ease-in both',
         'scale-in': 'scale-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        // Exit is deliberately quicker than enter — dismissal should feel instant
+        'sheet-in': 'sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'sheet-out': 'sheet-out 150ms cubic-bezier(0.4, 0, 1, 1) both',
         shimmer: 'shimmer 1.6s infinite',
       },
     },

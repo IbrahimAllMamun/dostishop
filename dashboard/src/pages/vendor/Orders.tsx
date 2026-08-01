@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatTk, formatDate } from '@/lib/format';
+import { useDialogs } from '@/components/Dialogs';
 import type { SubOrder } from '@/lib/types';
 
 function printInvoice(s: SubOrder, shopName: string) {
@@ -48,6 +49,7 @@ const TABS = [
 ];
 
 export function VendorOrders() {
+  const { notify } = useDialogs();
   const shopName = useAuth((s) => s.user?.shop?.name ?? 'Shop');
   const [subOrders, setSubOrders] = useState<SubOrder[]>([]);
   const [tab, setTab] = useState('PENDING');
@@ -71,7 +73,11 @@ export function VendorOrders() {
       await api.patch(`/orders/vendor/suborders/${id}`, { status });
       setSubOrders((arr) => arr.map((s) => (s.id === id ? { ...s, status } : s)));
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
+      await notify({
+        title: 'Could not update the order',
+        description: e instanceof Error ? e.message : 'Failed',
+        tone: 'danger',
+      });
     } finally {
       setBusy(null);
     }
@@ -83,7 +89,11 @@ export function VendorOrders() {
       await api.patch(`/orders/vendor/suborders/${id}`, { trackingNo });
       setSubOrders((arr) => arr.map((s) => (s.id === id ? { ...s, trackingNo } : s)));
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
+      await notify({
+        title: 'Could not save the tracking number',
+        description: e instanceof Error ? e.message : 'Failed',
+        tone: 'danger',
+      });
     } finally {
       setBusy(null);
     }

@@ -4,13 +4,17 @@ import { api, API_URL } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { formatTk } from '@/lib/format';
 import { TableSkeleton } from '@/components/Skeleton';
+import { useDialogs } from '@/components/Dialogs';
+import { ProductEditDialog } from './ProductEditDialog';
 import type { Product } from '@/lib/types';
 
 export function VendorProducts() {
+  const { notify } = useDialogs();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function load() {
@@ -22,16 +26,6 @@ export function VendorProducts() {
 
   useEffect(load, []);
 
-  async function remove(id: string) {
-    if (!confirm('Delete this product?')) return;
-    try {
-      await api.del(`/products/${id}`);
-      setProducts((p) => p.filter((x) => x.id !== id));
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
-    }
-  }
-
   function stockOf(p: Product) {
     return (p.variants ?? []).reduce((n, v) => n + v.stockQty, 0);
   }
@@ -42,7 +36,7 @@ export function VendorProducts() {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) {
-      alert('Export failed');
+      await notify({ title: 'Export failed', description: 'Please try again.', tone: 'danger' });
       return;
     }
     const blob = await res.blob();
@@ -119,6 +113,10 @@ export function VendorProducts() {
         <div className="rounded-lg bg-sand/70 px-4 py-2 text-sm">{importMsg}</div>
       )}
 
+      <p className="text-sm text-muted-foreground">
+        Select a product to edit it.
+      </p>
+
       <div className="card overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -127,15 +125,14 @@ export function VendorProducts() {
               <th className="th">Price</th>
               <th className="th">Stock</th>
               <th className="th">Status</th>
-              <th className="th"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeleton cols={5} />
+              <TableSkeleton cols={4} />
             ) : products.length === 0 ? (
               <tr>
-                <td className="td text-muted-foreground" colSpan={5}>
+                <td className="td text-muted-foreground" colSpan={4}>
                   No products yet. Click “Add product”.
                 </td>
               </tr>
@@ -143,7 +140,17 @@ export function VendorProducts() {
               products.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Edit ${p.name}`}
+                  onClick={() => setEditing(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setEditing(p);
+                    }
+                  }}
+                  className="cursor-pointer border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   <td className="td">
                     <div className="flex items-center gap-3">
@@ -173,23 +180,19 @@ export function VendorProducts() {
                       {p.isActive ? 'Active' : 'Hidden'}
                     </span>
                   </td>
-                  <td className="td text-right">
-                    <Link
-                      to={`/vendor/products/${p.id}/edit`}
-                      className="mr-4 text-sm text-primary hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    <button onClick={() => remove(p.id)} className="text-sm text-muted-foreground hover:text-sale">
-                      Delete
-                    </button>
-                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      <ProductEditDialog
+        product={editing}
+        onClose={() => setEditing(null)}
+        onSaved={load}
+        onDeleted={(id) => setProducts((list) => list.filter((x) => x.id !== id))}
+      />
     </div>
   );
 }

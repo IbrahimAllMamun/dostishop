@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { Product, Variant } from '@/lib/types';
@@ -11,6 +11,9 @@ export function variantLabel(v: Variant): string {
   return [v.size, v.color].filter(Boolean).join(' / ') || v.sku || 'Default';
 }
 
+/** Matches the `sheet-out` / `overlay fade-out` durations in tailwind.config.ts */
+const EXIT_MS = 150;
+
 /** Lightweight variant picker shown when a card can't add to cart unambiguously. */
 export function QuickView({ product, onClose }: { product: Product; onClose: () => void }) {
   const t = useT();
@@ -20,18 +23,25 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
     variants.find((v) => v.stockQty > 0) ?? variants[0] ?? null,
   );
   const [mounted, setMounted] = useState(false);
+  // The parent unmounts us on close, so the exit animation has to finish first
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
+  const requestClose = useCallback(() => {
+    setClosing(true);
+    setTimeout(onClose, EXIT_MS);
+  }, [onClose]);
+
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && requestClose();
     document.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
       document.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, [requestClose]);
 
   if (!mounted) return null;
 
@@ -53,17 +63,25 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
       quantity: 1,
       stockQty: variant?.stockQty,
     });
-    onClose();
+    requestClose();
   }
 
   return createPortal(
-    <>
-      <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
+    <div className="fixed inset-0 z-50 grid place-items-center p-4">
+      <div
+        onClick={requestClose}
+        aria-hidden
+        className={`absolute inset-0 bg-ink/50 backdrop-blur-sm ${
+          closing ? 'animate-fade-out' : 'animate-fade-in'
+        }`}
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={product.name}
-        className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface p-5 shadow-2xl"
+        className={`relative w-[min(92vw,420px)] rounded-2xl bg-surface p-5 shadow-float ${
+          closing ? 'animate-sheet-out' : 'animate-sheet-in'
+        }`}
       >
         <div className="flex gap-4">
           {image && (
@@ -76,9 +94,9 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
             {product.shop && <p className="text-xs text-muted">{product.shop.name}</p>}
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t('nav.close')}
-            className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-sand hover:text-ink"
+            className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-[background-color,color,transform] duration-200 ease-out hover:bg-sand hover:text-ink active:scale-90"
           >
             ✕
           </button>
@@ -88,7 +106,7 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
           <div className="mt-4 space-y-2">
             <p className="text-sm font-medium">{t('product.options')}</p>
             <div className="flex flex-wrap gap-2">
-              {variants.map((v) => {
+              {variants.map((v, i) => {
                 const selected = variant?.id === v.id;
                 const disabled = v.stockQty <= 0;
                 return (
@@ -96,11 +114,15 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
                     key={v.id}
                     onClick={() => setVariant(v)}
                     disabled={disabled}
-                    className={`min-h-11 rounded-full border px-4 text-sm transition ${
+                    // Chips arrive just after the panel, one after another
+                    style={closing ? undefined : { animationDelay: `${140 + i * 40}ms` }}
+                    className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95 ${
+                      closing ? '' : 'animate-scale-in'
+                    } ${
                       selected
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-ink/15 text-ink hover:border-ink'
-                    } ${disabled ? 'cursor-not-allowed opacity-40 line-through' : ''}`}
+                    } ${disabled ? 'cursor-not-allowed opacity-40 line-through active:scale-100' : ''}`}
                   >
                     {variantLabel(v)}
                   </button>
@@ -119,7 +141,7 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
           </Link>
         </div>
       </div>
-    </>,
+    </div>,
     document.body,
   );
 }

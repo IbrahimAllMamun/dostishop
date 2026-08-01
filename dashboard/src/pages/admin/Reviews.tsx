@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDate } from '@/lib/format';
+import { useDialogs } from '@/components/Dialogs';
 import type { Review } from '@/lib/types';
 
 const FILTERS = ['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const;
@@ -16,6 +17,7 @@ function StarsInline({ n }: { n: number }) {
 }
 
 export function AdminReviews() {
+  const { confirm, notify } = useDialogs();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('PENDING');
   const [loading, setLoading] = useState(true);
@@ -39,14 +41,24 @@ export function AdminReviews() {
       setReviews((rs) => rs.filter((r) => r.id !== id || filter === 'ALL'));
       if (filter === 'ALL') load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed');
+      await notify({
+        title: 'Could not update the review',
+        description: e instanceof Error ? e.message : 'Failed',
+        tone: 'danger',
+      });
     } finally {
       setBusy(null);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this review permanently?')) return;
+    const ok = await confirm({
+      title: 'Delete this review permanently?',
+      description: 'The rating it contributed is removed from the product too. This cannot be undone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api.del(`/reviews/admin/${id}`);
     setReviews((rs) => rs.filter((r) => r.id !== id));
   }

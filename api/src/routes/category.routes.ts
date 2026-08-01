@@ -21,11 +21,13 @@ categoryRouter.post(
   validate(categoryCreateSchema),
   createCategory,
 );
+// Vendors may edit/delete their own categories until an admin curates one;
+// the ownership check itself lives in the controller (`assertCanMutate`).
 categoryRouter.patch(
   '/:id',
   authenticate,
-  authorize('SUPER_ADMIN'),
+  authorize('SUPER_ADMIN', 'VENDOR'),
   validate(categoryUpdateSchema),
   updateCategory,
 );
-categoryRouter.delete('/:id', authenticate, authorize('SUPER_ADMIN'), deleteCategory);
+categoryRouter.delete('/:id', authenticate, authorize('SUPER_ADMIN', 'VENDOR'), deleteCategory);

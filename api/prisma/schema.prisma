@@ -115,8 +115,16 @@ model Category {
   children  Category[] @relation("CategoryTree")
   products  Product[]
   sortOrder Int        @default(0)
+  // Vendor who created it (null = seeded or admin-created). A vendor may edit or
+  // delete only their own categories.
+  createdById String?
+  // Set the moment a SUPER_ADMIN edits the category. Once the platform has
+  // curated it, the original vendor loses edit rights for good.
+  adminLocked Boolean  @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+
+  @@index([createdById])
 }
 
 model Product {
