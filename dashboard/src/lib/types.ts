@@ -38,11 +38,36 @@ export interface ProductImage {
   sortOrder?: number;
 }
 
+export interface AttributeValue {
+  id: string;
+  attributeId: string;
+  value: string;
+  sortOrder: number;
+  /** How many variants carry this value — deleting one that is in use fails */
+  _count?: { variants: number };
+}
+
+export interface Attribute {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  values: AttributeValue[];
+  /** Vendor who created it; null for seeded or admin-created attributes */
+  createdById?: string | null;
+  /** An admin has curated it — the original vendor can no longer change it */
+  adminLocked?: boolean;
+  _count?: { values: number };
+}
+
 export interface Variant {
   id?: string;
   sku?: string | null;
+  /** Denormalised copies of the Size/Color values — derived on the server */
   size?: string | null;
   color?: string | null;
+  /** The normalised definition: which attribute values this variant carries */
+  attributes?: Array<{ valueId: string }>;
   priceOverride?: Money | null;
   stockQty: number;
 }

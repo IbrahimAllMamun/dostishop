@@ -23,6 +23,7 @@ import { ProductForm } from '@/pages/vendor/ProductForm';
 import { VendorOrders } from '@/pages/vendor/Orders';
 import { VendorAnalytics } from '@/pages/vendor/Analytics';
 import { ShopProfile } from '@/pages/vendor/ShopProfile';
+import { Attributes } from '@/pages/Attributes';
 
 function HomeRedirect() {
   const user = useAuth((s) => s.user);
@@ -49,6 +50,7 @@ export function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/shops" element={<AdminShops />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
+            <Route path="/admin/attributes" element={<Attributes />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/admin/reviews" element={<AdminReviews />} />
             <Route path="/admin/abandoned" element={<AdminAbandoned />} />
@@ -74,6 +76,7 @@ export function App() {
             <Route path="/vendor/analytics" element={<VendorAnalytics />} />
             <Route path="/vendor/payouts" element={<VendorPayouts />} />
             <Route path="/vendor/categories" element={<VendorCategories />} />
+            <Route path="/vendor/attributes" element={<Attributes />} />
             <Route path="/vendor/shop" element={<ShopProfile />} />
           </Route>
 

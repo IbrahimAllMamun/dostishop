@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ListTree,
   Package,
+  SlidersHorizontal,
   Receipt,
   Settings,
   ShoppingBag,
@@ -37,6 +38,7 @@ export const adminNav: NavGroup[] = [
     items: [
       { to: '/admin/shops', label: 'Shops', icon: Store },
       { to: '/admin/categories', label: 'Categories', icon: ListTree },
+      { to: '/admin/attributes', label: 'Attributes', icon: SlidersHorizontal },
       { to: '/admin/banners', label: 'Banners', icon: Image },
     ],
   },
@@ -69,6 +71,7 @@ export const vendorNav: NavGroup[] = [
     items: [
       { to: '/vendor/products', label: 'Products', icon: Package },
       { to: '/vendor/categories', label: 'Categories', icon: ListTree },
+      { to: '/vendor/attributes', label: 'Attributes', icon: SlidersHorizontal },
     ],
   },
   {

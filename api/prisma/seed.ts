@@ -384,6 +384,8 @@ async function main() {
     });
   }
 
+  await linkVariantAttributes();
+
   const totals = {
     shops: await prisma.shop.count(),
     products: await prisma.product.count(),
@@ -395,6 +397,63 @@ async function main() {
   console.log('   Super Admin  → admin@boutique.test  / Admin@123');
   console.log('   Vendor       → vendor@boutique.test / Vendor@123');
   console.log('   Demo vendors → *@boutique.test      / Store@123');
+}
+
+/**
+ * Mirrors the backfill in the `attributes` migration, so a re-seeded database
+ * ends up in the same shape as a migrated one: variants above are created with
+ * plain size/color strings, and this promotes them into the normalised
+ * Attribute / AttributeValue / VariantAttribute tables.
+ *
+ * Idempotent — every write is an upsert or skips duplicates.
+ */
+async function linkVariantAttributes() {
+  const specs = [
+    { id: 'attr_size', name: 'Size', slug: 'size', sortOrder: 0, field: 'size' as const },
+    { id: 'attr_color', name: 'Color', slug: 'color', sortOrder: 1, field: 'color' as const },
+  ];
+
+  let links = 0;
+  for (const spec of specs) {
+    const attribute = await prisma.attribute.upsert({
+      where: { slug: spec.slug },
+      update: {},
+      // createdById null = platform-owned: no vendor can edit or delete these
+      create: { id: spec.id, name: spec.name, slug: spec.slug, sortOrder: spec.sortOrder },
+    });
+
+    const variants = await prisma.productVariant.findMany({
+      where: { [spec.field]: { not: null } },
+      select: { id: true, [spec.field]: true },
+    });
+
+    const distinct = [
+      ...new Set(
+        variants.map((v) => (v[spec.field] as string | null)?.trim()).filter((v): v is string => Boolean(v)),
+      ),
+    ].sort();
+
+    await prisma.attributeValue.createMany({
+      data: distinct.map((value, i) => ({ attributeId: attribute.id, value, sortOrder: i })),
+      skipDuplicates: true,
+    });
+
+    const values = await prisma.attributeValue.findMany({ where: { attributeId: attribute.id } });
+    const byValue = new Map(values.map((v) => [v.value, v.id]));
+
+    const rows = variants
+      .map((v) => {
+        const valueId = byValue.get((v[spec.field] as string | null)?.trim() ?? '');
+        return valueId ? { variantId: v.id, valueId } : null;
+      })
+      .filter((r): r is { variantId: string; valueId: string } => r !== null);
+
+    if (rows.length) {
+      const res = await prisma.variantAttribute.createMany({ data: rows, skipDuplicates: true });
+      links += res.count;
+    }
+  }
+  console.log(`   Attribute links created this run: ${links}`);
 }
 
 main()

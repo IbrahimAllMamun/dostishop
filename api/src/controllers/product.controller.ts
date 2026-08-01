@@ -387,37 +387,52 @@ export const createProduct = asyncHandler(async (req, res) => {
             })),
           }
         : undefined,
-      variants: variants?.length
-        ? {
-            create: variants.map(
-              (v: {
-                sku?: string;
-                size?: string;
-                color?: string;
-                priceOverride?: number;
-                stockQty?: number;
-              }) => ({
-                sku: v.sku,
-                size: v.size,
-                color: v.color,
-                priceOverride: v.priceOverride ?? null,
-                stockQty: v.stockQty ?? 0,
-              }),
-            ),
-          }
-        : undefined,
     },
     include: { images: true, variants: true },
   });
 
-  res.status(201).json({ product });
+  // Variants are created after the product so each one's id is available for
+  // its attribute links (a nested `create` would not hand them back).
+  if (variants?.length) {
+    const incoming = variants as VariantInput[];
+    const valueMap = await loadAttributeValues(incoming);
+    for (const v of incoming) {
+      const { size, color } = denormalise(v, valueMap);
+      const created = await prisma.productVariant.create({
+        data: {
+          productId: product.id,
+          sku: v.sku,
+          size,
+          color,
+          priceOverride: v.priceOverride ?? null,
+          stockQty: v.stockQty ?? 0,
+        },
+      });
+      if (v.attributeValueIds?.length) {
+        await prisma.variantAttribute.createMany({
+          data: v.attributeValueIds.map((valueId) => ({ variantId: created.id, valueId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+  }
+
+  res.status(201).json({
+    product: await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+      include: { images: true, variants: true },
+    }),
+  });
 });
 
 export const getMyProduct = asyncHandler(async (req, res) => {
   const shop = await getOwnShop(req.user!.sub);
   const product = await prisma.product.findFirst({
     where: { id: req.params.id, shopId: shop.id },
-    include: { images: { orderBy: { sortOrder: 'asc' } }, variants: true },
+    include: {
+      images: { orderBy: { sortOrder: 'asc' } },
+      variants: { include: { attributes: { select: { valueId: true } } } },
+    },
   });
   if (!product) throw new ApiError(404, 'Product not found');
   res.json({ product });
@@ -428,8 +443,47 @@ interface VariantInput {
   sku?: string;
   size?: string;
   color?: string;
+  attributeValueIds?: string[];
   priceOverride?: number;
   stockQty?: number;
+}
+
+/**
+ * Resolve the attribute values a batch of variants references, once per
+ * request rather than once per variant.
+ */
+async function loadAttributeValues(variants: VariantInput[]) {
+  const ids = [...new Set(variants.flatMap((v) => v.attributeValueIds ?? []))];
+  if (!ids.length) return new Map<string, { id: string; value: string; slug: string }>();
+
+  const rows = await prisma.attributeValue.findMany({
+    where: { id: { in: ids } },
+    include: { attribute: { select: { slug: true } } },
+  });
+  if (rows.length !== ids.length) {
+    throw new ApiError(400, 'One or more selected attribute values no longer exist');
+  }
+  return new Map(rows.map((r) => [r.id, { id: r.id, value: r.value, slug: r.attribute.slug }]));
+}
+
+/**
+ * `size` and `color` stay on the row as denormalised copies — checkout labels,
+ * CSV export and the storefront facets read them directly. When a variant is
+ * defined by attribute values, they are derived from those; otherwise the
+ * free-text input is kept (CSV import path).
+ */
+function denormalise(
+  v: VariantInput,
+  values: Map<string, { value: string; slug: string }>,
+): { size: string | null; color: string | null } {
+  if (!v.attributeValueIds?.length) {
+    return { size: v.size ?? null, color: v.color ?? null };
+  }
+  const picked = v.attributeValueIds.map((id) => values.get(id)!).filter(Boolean);
+  return {
+    size: picked.find((p) => p.slug === 'size')?.value ?? null,
+    color: picked.find((p) => p.slug === 'color')?.value ?? null,
+  };
 }
 
 export const updateProduct = asyncHandler(async (req, res) => {
@@ -493,36 +547,58 @@ export const updateProduct = asyncHandler(async (req, res) => {
         await tx.productVariant.deleteMany({ where: { id: { in: removeIds } } });
       }
 
+      const valueMap = await loadAttributeValues(incoming);
+
       for (const v of incoming) {
+        const { size, color } = denormalise(v, valueMap);
+        let variantId: string;
+
         if (v.id) {
           await tx.productVariant.update({
             where: { id: v.id },
             data: {
-              size: v.size ?? null,
-              color: v.color ?? null,
+              size,
+              color,
               sku: v.sku ?? null,
               priceOverride: v.priceOverride ?? null,
               stockQty: v.stockQty ?? 0,
             },
           });
+          variantId = v.id;
         } else {
-          await tx.productVariant.create({
+          const created = await tx.productVariant.create({
             data: {
               productId: existing.id,
-              size: v.size,
-              color: v.color,
+              size,
+              color,
               sku: v.sku,
               priceOverride: v.priceOverride ?? null,
               stockQty: v.stockQty ?? 0,
             },
           });
+          variantId = created.id;
+        }
+
+        // Replace the link set wholesale — simpler and safer than diffing, and
+        // it is at most a handful of rows per variant.
+        if (v.attributeValueIds) {
+          await tx.variantAttribute.deleteMany({ where: { variantId } });
+          if (v.attributeValueIds.length) {
+            await tx.variantAttribute.createMany({
+              data: v.attributeValueIds.map((valueId) => ({ variantId, valueId })),
+              skipDuplicates: true,
+            });
+          }
         }
       }
     }
 
     return tx.product.findUniqueOrThrow({
       where: { id: existing.id },
-      include: { images: { orderBy: { sortOrder: 'asc' } }, variants: true },
+      include: {
+      images: { orderBy: { sortOrder: 'asc' } },
+      variants: { include: { attributes: { select: { valueId: true } } } },
+    },
     });
   });
 

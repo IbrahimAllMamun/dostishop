@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { ImageUploader } from '@/components/ImageUploader';
-import type { Category, Product } from '@/lib/types';
+import type { Attribute, Category, Product } from '@/lib/types';
 
 /**
  * The product form, shared by the full-page "new product" route and the edit
@@ -12,13 +13,13 @@ import type { Category, Product } from '@/lib/types';
 
 export interface VariantRow {
   id?: string;
-  size: string;
-  color: string;
+  /** AttributeValue ids — the normalised definition of this variant */
+  attributeValueIds: string[];
   stockQty: string;
   priceOverride: string;
 }
 
-const emptyVariant: VariantRow = { size: '', color: '', stockQty: '0', priceOverride: '' };
+const emptyVariant: VariantRow = { attributeValueIds: [], stockQty: '0', priceOverride: '' };
 
 interface FormValues {
   name: string;
@@ -46,6 +47,7 @@ export function useProductForm(id?: string) {
   const isEdit = Boolean(id);
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
@@ -61,6 +63,7 @@ export function useProductForm(id?: string) {
 
   useEffect(() => {
     api.get<{ categories: Category[] }>('/categories').then((d) => setCategories(d.categories));
+    api.get<{ attributes: Attribute[] }>('/attributes').then((d) => setAttributes(d.attributes));
   }, []);
 
   useEffect(() => {
@@ -92,8 +95,7 @@ export function useProductForm(id?: string) {
           (p.variants ?? []).length
             ? (p.variants ?? []).map((v) => ({
                 id: v.id,
-                size: v.size ?? '',
-                color: v.color ?? '',
+                attributeValueIds: (v.attributes ?? []).map((a) => a.valueId),
                 stockQty: String(v.stockQty),
                 priceOverride: v.priceOverride != null ? String(Number(v.priceOverride)) : '',
               }))
@@ -146,11 +148,11 @@ export function useProductForm(id?: string) {
         isFeatured: form.isFeatured,
         images: imageUrls.map((url, idx) => ({ url, sortOrder: idx })),
         variants: variants
-          .filter((v) => v.id || v.size || v.color || Number(v.stockQty) > 0)
+          .filter((v) => v.id || v.attributeValueIds.length || Number(v.stockQty) > 0)
           .map((v) => ({
             ...(v.id ? { id: v.id } : {}),
-            size: v.size || undefined,
-            color: v.color || undefined,
+            // Server derives size/color from these
+            attributeValueIds: v.attributeValueIds,
             stockQty: Number(v.stockQty) || 0,
             priceOverride: v.priceOverride ? Number(v.priceOverride) : undefined,
           })),
@@ -169,6 +171,7 @@ export function useProductForm(id?: string) {
   return {
     isEdit,
     categories,
+    attributes,
     error,
     setError,
     saving,
@@ -196,6 +199,7 @@ export type ProductFormState = ReturnType<typeof useProductForm>;
 export function ProductFields({ state }: { state: ProductFormState }) {
   const {
     categories,
+    attributes,
     form,
     set,
     imageUrls,
@@ -389,63 +393,101 @@ export function ProductFields({ state }: { state: ProductFormState }) {
             + Add variant
           </button>
         </div>
-        {variants.map((v, idx) => (
-          <div key={v.id ?? idx} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            <input
-              className="input"
-              placeholder="Size"
-              value={v.size}
-              onChange={(e) =>
-                setVariants((arr) => arr.map((x, i) => (i === idx ? { ...x, size: e.target.value } : x)))
-              }
-            />
-            <input
-              className="input"
-              placeholder="Color"
-              value={v.color}
-              onChange={(e) =>
-                setVariants((arr) =>
-                  arr.map((x, i) => (i === idx ? { ...x, color: e.target.value } : x)),
-                )
-              }
-            />
-            <input
-              className="input"
-              type="number"
-              min="0"
-              placeholder="Stock"
-              value={v.stockQty}
-              onChange={(e) =>
-                setVariants((arr) =>
-                  arr.map((x, i) => (i === idx ? { ...x, stockQty: e.target.value } : x)),
-                )
-              }
-            />
-            <input
-              className="input"
-              type="number"
-              min="0"
-              placeholder="Price override"
-              value={v.priceOverride}
-              onChange={(e) =>
-                setVariants((arr) =>
-                  arr.map((x, i) => (i === idx ? { ...x, priceOverride: e.target.value } : x)),
-                )
-              }
-            />
-            {variants.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setVariants((arr) => arr.filter((_, i) => i !== idx))}
-                className="btn-ghost btn-sm"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-        ))}
+        {variants.map((v, idx) => {
+          /** Swap this row's pick for `attr`, leaving its other attributes alone. */
+          const setPick = (attr: Attribute, valueId: string) =>
+            setVariants((arr) =>
+              arr.map((x, i) => {
+                if (i !== idx) return x;
+                const otherAttrValueIds = x.attributeValueIds.filter(
+                  (id) => !attr.values.some((av) => av.id === id),
+                );
+                return {
+                  ...x,
+                  attributeValueIds: valueId ? [...otherAttrValueIds, valueId] : otherAttrValueIds,
+                };
+              }),
+            );
+
+          return (
+            <div
+              key={v.id ?? idx}
+              className="grid gap-2 rounded-lg bg-canvas p-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {attributes.map((attr) => {
+                const current = v.attributeValueIds.find((id) =>
+                  attr.values.some((av) => av.id === id),
+                );
+                return (
+                  <div key={attr.id}>
+                    <label className="label text-xs">{attr.name}</label>
+                    <select
+                      className="input"
+                      value={current ?? ''}
+                      onChange={(e) => setPick(attr, e.target.value)}
+                    >
+                      <option value="">— any —</option>
+                      {attr.values.map((av) => (
+                        <option key={av.id} value={av.id}>
+                          {av.value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+
+              <div>
+                <label className="label text-xs">Stock</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  value={v.stockQty}
+                  onChange={(e) =>
+                    setVariants((arr) =>
+                      arr.map((x, i) => (i === idx ? { ...x, stockQty: e.target.value } : x)),
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <label className="label text-xs">Price override</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  placeholder="—"
+                  value={v.priceOverride}
+                  onChange={(e) =>
+                    setVariants((arr) =>
+                      arr.map((x, i) => (i === idx ? { ...x, priceOverride: e.target.value } : x)),
+                    )
+                  }
+                />
+              </div>
+
+              {variants.length > 1 && (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => setVariants((arr) => arr.filter((_, i) => i !== idx))}
+                    className="btn-ghost btn-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
         <p className="text-xs text-muted-foreground">
-          Leave size/color blank for a single default variant. Stock controls availability.
+          Leave every attribute on “any” for a single default variant. Stock controls
+          availability. Options come from{' '}
+          <Link to="/vendor/attributes" className="text-primary hover:underline">
+            Attributes
+          </Link>
+          .
         </p>
       </div>
     </>

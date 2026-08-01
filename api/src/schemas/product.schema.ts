@@ -8,8 +8,12 @@ const imageSchema = z.object({
 
 const variantSchema = z.object({
   sku: z.string().nullish(),
+  // Free-text size/color remain accepted (CSV import still sends them). When
+  // `attributeValueIds` is present it wins, and size/color are derived from it.
   size: z.string().nullish(),
   color: z.string().nullish(),
+  /** AttributeValue ids that define this variant */
+  attributeValueIds: z.array(z.string()).max(20).optional(),
   priceOverride: z.number().nonnegative().nullish(),
   stockQty: z.number().int().nonnegative().optional(),
 });
