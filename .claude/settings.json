@@ -34,5 +34,9 @@
       "Bash(npx prisma db push --accept-data-loss*)"
     ]
   },
+  "env": {
+    "// CHROME_PATH": "Chrome is a per-user install here; shot.js only probes Program Files and would otherwise fail to find it",
+    "CHROME_PATH": "C:/Users/User/AppData/Local/Google/Chrome/Application/chrome.exe"
+  },
   "enabledMcpjsonServers": ["shadcn"]
 }
