@@ -1,97 +1,175 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { StatCard } from '@/components/StatCard';
-import { StatsSkeleton, TableSkeleton } from '@/components/Skeleton';
 import { formatTk } from '@/lib/format';
-import type { Order, Shop } from '@/lib/types';
+import { StatsSkeleton } from '@/components/Skeleton';
+import { StatTile } from '@/components/charts/StatTile';
+import { RevenueChart } from '@/components/charts/RevenueChart';
+import { CategoryDonut } from '@/components/charts/CategoryDonut';
+import { RangePicker, type RangeKey } from '@/components/charts/RangePicker';
+import { seriesColor } from '@/components/charts/theme';
+import type { AdminAnalytics } from '@/lib/analytics';
 
 export function AdminDashboard() {
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [range, setRange] = useState<RangeKey>('30d');
+  const [data, setData] = useState<AdminAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      api.get<{ shops: Shop[] }>('/shops/admin'),
-      api.get<{ orders: Order[] }>('/orders/admin/all'),
-    ])
-      .then(([s, o]) => {
-        setShops(s.shops);
-        setOrders(o.orders);
-      })
+  const load = useCallback(() => {
+    setLoading(true);
+    api
+      .get<AdminAnalytics>(`/analytics/admin?range=${range}`)
+      .then(setData)
       .finally(() => setLoading(false));
-  }, []);
+  }, [range]);
 
-  const pendingShops = shops.filter((s) => s.status === 'PENDING').length;
-  const activeShops = shops.filter((s) => s.status === 'ACTIVE').length;
-  const revenue = orders.reduce((n, o) => n + Number(o.grandTotal), 0);
+  useEffect(load, [load]);
+
+  const spark = (key: 'revenue' | 'orders') => (data?.daily ?? []).map((d) => ({ value: d[key] }));
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Overview</h1>
-      {loading ? (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-[-0.02em]">Overview</h1>
+        <RangePicker value={range} onChange={setRange} />
+      </div>
+
+      {loading || !data ? (
         <>
           <StatsSkeleton />
-          <div className="card overflow-hidden">
-            <div className="border-b border-ink/5 px-4 py-3 font-semibold">Recent orders</div>
-            <table className="w-full">
-              <tbody>
-                <TableSkeleton cols={4} />
-              </tbody>
-            </table>
-          </div>
+          <div className="skeleton h-72 w-full" />
         </>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total orders" value={orders.length} tone="primary" index={0} />
-            <StatCard label="Gross sales" value={formatTk(revenue)} tone="success" index={1} />
-            <StatCard
-              label="Pending approvals"
-              value={pendingShops}
-              tone={pendingShops ? 'warn' : 'default'}
-              hint="Shops awaiting review"
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              label="Revenue"
+              value={formatTk(data.summary.revenue)}
+              trend={data.summary.trend.revenue}
+              series={spark('revenue')}
+              color={seriesColor(0)}
+              index={0}
+            />
+            <StatTile
+              label="Orders"
+              value={data.summary.orders}
+              trend={data.summary.trend.orders}
+              series={spark('orders')}
+              color={seriesColor(3)}
+              index={1}
+            />
+            <StatTile
+              label="Commission earned"
+              value={formatTk(data.summary.commission)}
+              trend={data.summary.trend.commission}
+              hint="The platform's share"
               index={2}
             />
-            <StatCard label="Active shops" value={activeShops} index={3} />
+            <StatTile
+              label="Customers"
+              value={data.summary.customers}
+              hint="Distinct phone numbers"
+              index={3}
+            />
           </div>
 
-          <div className="card overflow-hidden">
-            <div className="border-b border-ink/5 px-4 py-3 font-semibold">Recent orders</div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-ink/5">
-                    <th className="th">Order</th>
-                    <th className="th">Customer</th>
-                    <th className="th">Shops</th>
-                    <th className="th">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.slice(0, 8).map((o) => (
-                    <tr
-                      key={o.id}
-                      className="border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60"
-                    >
-                      <td className="td font-medium">{o.orderNo}</td>
-                      <td className="td">{o.customerName}</td>
-                      <td className="td">{o.subOrders.length}</td>
-                      <td className="td">{formatTk(o.grandTotal)}</td>
-                    </tr>
-                  ))}
-                  {orders.length === 0 && (
-                    <tr>
-                      <td className="td text-muted-foreground" colSpan={4}>
-                        No orders yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
+            <div className="card overflow-hidden">
+              <div className="card-head">
+                <h2 className="font-semibold">Revenue</h2>
+                <span className="text-xs text-muted-foreground">
+                  Avg order {formatTk(data.summary.avgOrderValue)}
+                </span>
+              </div>
+              <div className="p-3">
+                <RevenueChart data={data.daily} />
+              </div>
+            </div>
+
+            <div className="card overflow-hidden">
+              <div className="card-head">
+                <h2 className="font-semibold">Sales by category</h2>
+              </div>
+              <CategoryDonut data={data.byCategory} />
             </div>
           </div>
+
+          <div className="grid gap-5 lg:grid-cols-3">
+            <RankCard
+              title="Top products"
+              rows={data.topProducts.map((p) => ({
+                key: p.productId,
+                name: p.name,
+                meta: `${p.unitsSold} sold`,
+                value: formatTk(p.revenue),
+              }))}
+            />
+            <RankCard
+              title="Best shops"
+              rows={data.topShops.map((s) => ({
+                key: s.shopId,
+                name: s.name,
+                meta: `${s.orders} order${s.orders === 1 ? '' : 's'}`,
+                value: formatTk(s.revenue),
+              }))}
+              footer={
+                <Link to="/admin/shops" className="text-xs text-primary hover:underline">
+                  All shops
+                </Link>
+              }
+            />
+            <RankCard
+              title="Top customers"
+              rows={data.topCustomers.map((c) => ({
+                key: c.phone,
+                name: c.name,
+                meta: `${c.phone} · ${c.orders} order${c.orders === 1 ? '' : 's'}`,
+                value: formatTk(c.spent),
+              }))}
+            />
+          </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function RankCard({
+  title,
+  rows,
+  footer,
+}: {
+  title: string;
+  rows: Array<{ key: string; name: string; meta: string; value: string }>;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="card-head">
+        <h2 className="font-semibold">{title}</h2>
+        {footer}
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-muted-foreground">Nothing yet.</p>
+      ) : (
+        <ul className="divide-y divide-ink/5">
+          {rows.map((r, i) => (
+            <li
+              key={r.key}
+              style={{ animationDelay: `${i * 25}ms` }}
+              className="flex animate-row-in items-center gap-3 px-5 py-2.5"
+            >
+              <span className="w-4 shrink-0 text-xs tabular-nums text-muted-foreground">
+                {i + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{r.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">{r.meta}</span>
+              </span>
+              <span className="shrink-0 text-sm tabular-nums">{r.value}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

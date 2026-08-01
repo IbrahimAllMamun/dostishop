@@ -36,3 +36,6 @@ api/uploads/
 
 # Claude Code: share project settings, keep personal overrides local
 .claude/settings.local.json
+
+# TypeScript incremental build cache — churns on every typecheck
+*.tsbuildinfo

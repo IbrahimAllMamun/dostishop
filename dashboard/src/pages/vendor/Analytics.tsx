@@ -1,111 +1,144 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatTk } from '@/lib/format';
-
-interface Analytics {
-  summary: { revenue: number; payout: number; orders: number; avgOrderValue: number };
-  byStatus: Array<{ status: string; count: number }>;
-  daily: Array<{ date: string; revenue: number }>;
-  topProducts: Array<{ productId: string; name: string; revenue: number; unitsSold: number }>;
-}
+import { StatsSkeleton } from '@/components/Skeleton';
+import { StatTile } from '@/components/charts/StatTile';
+import { RevenueChart } from '@/components/charts/RevenueChart';
+import { RangePicker, type RangeKey } from '@/components/charts/RangePicker';
+import { seriesColor } from '@/components/charts/theme';
+import type { VendorAnalytics as Data } from '@/lib/analytics';
 
 export function VendorAnalytics() {
-  const [data, setData] = useState<Analytics | null>(null);
+  const [range, setRange] = useState<RangeKey>('30d');
+  const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     api
-      .get<Analytics>('/analytics/vendor')
+      .get<Data>(`/analytics/vendor?range=${range}`)
       .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'));
-  }, []);
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [range]);
 
-  if (error) return <p className="text-sale">{error}</p>;
-  if (!data) return <p className="text-muted-foreground">Loading…</p>;
+  useEffect(load, [load]);
 
-  const max = Math.max(...data.daily.map((d) => d.revenue), 1);
+  if (error) return <p className="text-sale-strong">{error}</p>;
+
+  const spark = (key: 'revenue' | 'orders') => (data?.daily ?? []).map((d) => ({ value: d[key] }));
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Analytics</h1>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Revenue (all time)" value={formatTk(data.summary.revenue)} tone="primary" />
-        <StatCard label="Your payout" value={formatTk(data.summary.payout)} tone="success" hint="After commission" />
-        <StatCard label="Orders" value={data.summary.orders} />
-        <StatCard label="Avg order value" value={formatTk(data.summary.avgOrderValue)} />
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-[-0.02em]">Analytics</h1>
+        <RangePicker value={range} onChange={setRange} />
       </div>
 
-      {/* 30-day revenue bar chart */}
-      <div className="card p-5">
-        <p className="mb-4 font-semibold">Revenue — last 30 days</p>
-        <div className="flex h-40 items-end gap-[3px]">
-          {data.daily.map((d) => (
-            <div key={d.date} className="group relative flex-1">
-              <div
-                className="w-full rounded-t bg-primary/70 transition group-hover:bg-primary"
-                style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 4 : 1)}%` }}
-              />
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 text-xs text-canvas group-hover:block">
-                {d.date.slice(5)} · {formatTk(d.revenue)}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-          <span>{data.daily[0]?.date}</span>
-          <span>{data.daily[data.daily.length - 1]?.date}</span>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Top products */}
-        <div className="card overflow-hidden">
-          <p className="border-b border-ink/5 px-4 py-3 font-semibold">Top products</p>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-ink/5">
-                <th className="th">Product</th>
-                <th className="th">Units</th>
-                <th className="th">Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.topProducts.length === 0 ? (
-                <tr>
-                  <td className="td text-muted-foreground" colSpan={3}>
-                    No sales yet.
-                  </td>
-                </tr>
-              ) : (
-                data.topProducts.map((p) => (
-                  <tr key={p.productId} className="border-b border-ink/5 last:border-0">
-                    <td className="td">{p.name}</td>
-                    <td className="td">{p.unitsSold}</td>
-                    <td className="td font-medium">{formatTk(p.revenue)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Status breakdown */}
-        <div className="card p-5">
-          <p className="mb-3 font-semibold">Orders by status</p>
-          <div className="space-y-2">
-            {data.byStatus.map((s) => (
-              <div key={s.status} className="flex items-center justify-between">
-                <StatusBadge status={s.status} />
-                <span className="font-medium">{s.count}</span>
-              </div>
-            ))}
-            {data.byStatus.length === 0 && <p className="text-sm text-muted-foreground">No orders yet.</p>}
+      {loading || !data ? (
+        <>
+          <StatsSkeleton />
+          <div className="skeleton h-72 w-full" />
+        </>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              label="Revenue"
+              value={formatTk(data.summary.revenue)}
+              trend={data.summary.trend.revenue}
+              series={spark('revenue')}
+              color={seriesColor(0)}
+              index={0}
+            />
+            <StatTile
+              label="Your payout"
+              value={formatTk(data.summary.payout)}
+              trend={data.summary.trend.payout}
+              hint="After commission"
+              index={1}
+            />
+            <StatTile
+              label="Orders"
+              value={data.summary.orders}
+              trend={data.summary.trend.orders}
+              series={spark('orders')}
+              color={seriesColor(3)}
+              index={2}
+            />
+            <StatTile
+              label="Avg order value"
+              value={formatTk(data.summary.avgOrderValue)}
+              index={3}
+            />
           </div>
-        </div>
-      </div>
+
+          <div className="card overflow-hidden">
+            <div className="card-head">
+              <h2 className="font-semibold">Revenue</h2>
+            </div>
+            <div className="p-3">
+              <RevenueChart data={data.daily} />
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="card overflow-hidden">
+              <div className="card-head">
+                <h2 className="font-semibold">Top products</h2>
+                <span className="text-xs text-muted-foreground">by revenue</span>
+              </div>
+              {data.topProducts.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+                  Nothing sold in this period.
+                </p>
+              ) : (
+                <ul className="divide-y divide-ink/5">
+                  {data.topProducts.map((p, i) => (
+                    <li
+                      key={p.productId}
+                      style={{ animationDelay: `${i * 25}ms` }}
+                      className="flex animate-row-in items-center gap-3 px-5 py-2.5"
+                    >
+                      <span className="w-4 shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{p.name}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {p.unitsSold} sold
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-sm tabular-nums">{formatTk(p.revenue)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="card overflow-hidden">
+              <div className="card-head">
+                <h2 className="font-semibold">Orders by status</h2>
+                <span className="text-xs text-muted-foreground">all time</span>
+              </div>
+              {data.byStatus.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-muted-foreground">No orders yet.</p>
+              ) : (
+                <ul className="divide-y divide-ink/5">
+                  {data.byStatus.map((s) => (
+                    <li key={s.status} className="flex items-center gap-3 px-5 py-2.5">
+                      <StatusBadge status={s.status} />
+                      <span className="ml-auto text-sm tabular-nums">{s.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

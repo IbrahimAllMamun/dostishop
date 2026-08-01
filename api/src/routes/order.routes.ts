@@ -8,6 +8,7 @@ import {
   adminUpdateAbandoned,
   listMySubOrders,
   getMySubOrder,
+  exportMySubOrders,
   updateSubOrderStatus,
   adminListOrders,
   adminGetOrder,
@@ -38,6 +39,8 @@ orderRouter.get('/track', trackOrder);
 
 // Vendor
 orderRouter.get('/vendor/mine', authenticate, authorize('VENDOR'), listMySubOrders);
+orderRouter.get('/vendor/export', authenticate, authorize('VENDOR'), exportMySubOrders);
+// After /vendor/export so that literal path is not read as an id
 orderRouter.get('/vendor/suborders/:id', authenticate, authorize('VENDOR'), getMySubOrder);
 orderRouter.patch(
   '/vendor/suborders/:id',

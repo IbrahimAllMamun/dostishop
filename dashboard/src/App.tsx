@@ -25,6 +25,7 @@ import { VendorAnalytics } from '@/pages/vendor/Analytics';
 import { ShopProfile } from '@/pages/vendor/ShopProfile';
 import { Attributes } from '@/pages/Attributes';
 import { AdminOrderDetail } from '@/pages/admin/OrderDetail';
+import { AdminReport } from '@/pages/admin/Report';
 import { VendorOrderDetail } from '@/pages/vendor/OrderDetail';
 
 function HomeRedirect() {
@@ -58,6 +59,7 @@ export function App() {
             <Route path="/admin/abandoned" element={<AdminAbandoned />} />
             <Route path="/admin/banners" element={<AdminBanners />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
+            <Route path="/admin/report" element={<AdminReport />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />

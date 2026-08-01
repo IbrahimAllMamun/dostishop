@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '@/lib/api';
+import { Download } from 'lucide-react';
+import { api, API_URL } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatTk, formatDate } from '@/lib/format';
@@ -68,6 +69,23 @@ export function VendorOrders() {
 
   useEffect(load, [load]);
 
+  async function exportCsv() {
+    const token = useAuth.getState().token;
+    const res = await fetch(`${API_URL}/orders/vendor/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      await notify({ title: 'Export failed', description: 'Please try again.', tone: 'danger' });
+      return;
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'orders.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function updateStatus(id: string, status: string) {
     setBusy(id);
     try {
@@ -103,8 +121,11 @@ export function VendorOrders() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex flex-wrap gap-2">
+        <h1 className="text-2xl font-bold tracking-[-0.02em]">Orders</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={exportCsv} className="btn-ghost btn-sm">
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
           {TABS.map((t) => (
             <button
               key={t.key}

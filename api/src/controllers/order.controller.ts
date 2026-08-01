@@ -269,7 +269,15 @@ export const trackOrder = asyncHandler(async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { orderNo, phone },
     include: {
-      subOrders: { include: { items: true, shop: { select: { name: true, slug: true } } } },
+      subOrders: {
+        include: {
+          items: true,
+          shop: { select: { name: true, slug: true } },
+          // The customer-facing tracking page renders the same history the
+          // dashboard does; it is their order, so they get to see it.
+          events: { orderBy: { createdAt: 'asc' } },
+        },
+      },
     },
   });
   if (!order) throw new ApiError(404, 'Order not found');
@@ -338,6 +346,62 @@ export const getMySubOrder = asyncHandler(async (req, res) => {
   });
   if (!subOrder) throw new ApiError(404, 'Sub-order not found');
   res.json({ subOrder });
+});
+
+export const exportMySubOrders = asyncHandler(async (req, res) => {
+  const shop = await prisma.shop.findUnique({ where: { ownerId: req.user!.sub } });
+  if (!shop) throw new ApiError(404, 'Shop not found');
+
+  const subOrders = await prisma.subOrder.findMany({
+    where: { shopId: shop.id },
+    include: { items: true, order: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const rows = [
+    csvRow([
+      'Order No',
+      'Placed',
+      'Customer',
+      'Phone',
+      'Address',
+      'City',
+      'Zone',
+      'Payment',
+      'Status',
+      'Items',
+      'Subtotal',
+      'Shipping',
+      'Commission',
+      'Your payout',
+      'Tracking',
+    ]),
+  ];
+  for (const s of subOrders) {
+    rows.push(
+      csvRow([
+        s.order.orderNo,
+        s.order.createdAt.toISOString(),
+        s.order.customerName,
+        s.order.phone,
+        s.order.address,
+        s.order.city,
+        s.order.zone,
+        s.order.paymentMethod,
+        s.status,
+        s.items.map((i) => `${i.productName} x${i.quantity}`).join('; '),
+        Number(s.subtotal),
+        Number(s.shippingCost),
+        Number(s.commissionAmount),
+        Number(s.vendorPayout),
+        s.trackingNo,
+      ]),
+    );
+  }
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="orders.csv"');
+  res.send('﻿' + rows.join('\n'));
 });
 
 export const updateSubOrderStatus = asyncHandler(async (req, res) => {
