@@ -12,7 +12,19 @@ const productListInclude = {
   category: { select: { name: true, slug: true } },
   // Lightweight variant data so listing cards can add to cart / show stock
   variants: {
-    select: { id: true, size: true, color: true, stockQty: true, priceOverride: true },
+    select: {
+      id: true,
+      size: true,
+      color: true,
+      stockQty: true,
+      priceOverride: true,
+      attributes: {
+        select: {
+          value: { select: { id: true, value: true, attribute: { select: { name: true, slug: true } } } },
+        },
+        orderBy: { value: { attribute: { sortOrder: 'asc' as const } } },
+      },
+    },
   },
 };
 
@@ -214,7 +226,12 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
     where: { slug: req.params.slug, isActive: true },
     include: {
       images: { orderBy: { sortOrder: 'asc' } },
-      variants: true,
+      variants: { include: { attributes: {
+        select: {
+          value: { select: { id: true, value: true, attribute: { select: { name: true, slug: true } } } },
+        },
+        orderBy: { value: { attribute: { sortOrder: 'asc' as const } } },
+      } } },
       shop: { select: { name: true, slug: true } },
       category: { select: { name: true, slug: true } },
     },

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { formatTk, toNumber } from '@/lib/format';
 import { useCart } from '@/store/cart';
 import { Stars } from './Stars';
 import { useT } from '@/i18n/I18nProvider';
+import { VariantPicker, attributeGroups, resolveVariant } from './VariantPicker';
 
 function variantLabel(v: Variant): string {
   return [v.size, v.color].filter(Boolean).join(' / ') || v.sku || 'Default';
@@ -19,7 +20,23 @@ export function ProductDetail({ product }: { product: Product }) {
   const add = useCart((s) => s.add);
 
   const variants = product.variants ?? [];
-  const [variant, setVariant] = useState<Variant | null>(variants[0] ?? null);
+  const groups = useMemo(() => attributeGroups(variants), [variants]);
+
+  // Pre-select the first in-stock variant's values so the page opens on a
+  // valid, buyable combination rather than an empty picker.
+  const [picked, setPicked] = useState<Record<string, string>>(() => {
+    const seed = variants.find((v) => v.stockQty > 0) ?? variants[0];
+    if (!seed) return {};
+    return Object.fromEntries(
+      (seed.attributes ?? []).map((a) => [a.value.attribute.slug, a.value.value]),
+    );
+  });
+
+  const variant = useMemo(() => {
+    // No attribute groups means a single implicit variant — use it directly
+    if (!groups.length) return variants[0] ?? null;
+    return resolveVariant(variants, groups, picked);
+  }, [variants, groups, picked]);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
@@ -29,8 +46,13 @@ export function ProductDetail({ product }: { product: Product }) {
   const hasSale =
     product.salePrice != null && toNumber(product.salePrice) < toNumber(product.basePrice);
   const outOfStock = variant ? variant.stockQty <= 0 : false;
+  // Null variant = the shopper has not finished choosing; adding now would put
+  // an item in the cart with no variant attached.
+  const unresolved = groups.length > 0 && !variant;
+  const cannotBuy = outOfStock || unresolved;
 
   function addToCart() {
+    if (cannotBuy) return;
     add({
       productId: product.id,
       slug: product.slug,
@@ -125,32 +147,15 @@ export function ProductDetail({ product }: { product: Product }) {
           <p className="leading-relaxed text-ink/80">{product.description}</p>
         )}
 
-        {/* Variants */}
-        {variants.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t('product.options')}</p>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((v) => {
-                const selected = variant?.id === v.id;
-                const disabled = v.stockQty <= 0;
-                return (
-                  <button
-                    key={v.id}
-                    onClick={() => setVariant(v)}
-                    disabled={disabled}
-                    className={`rounded-full border px-4 py-2 text-sm transition ${
-                      selected
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-ink/15 text-ink hover:border-ink'
-                    } ${disabled ? 'cursor-not-allowed opacity-40 line-through' : ''}`}
-                  >
-                    {variantLabel(v)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* One picker per attribute — Size and Colour are separate choices,
+            not a single list of pre-combined labels. */}
+        <VariantPicker
+          variants={variants}
+          groups={groups}
+          picked={picked}
+          onPick={(slug, value) => setPicked((p) => ({ ...p, [slug]: value }))}
+          optionsLabel={t('product.options')}
+        />
 
         {/* Quantity */}
         <div className="flex items-center gap-4">
@@ -182,10 +187,10 @@ export function ProductDetail({ product }: { product: Product }) {
 
         {/* Actions */}
         <div className="flex flex-wrap gap-3 pt-2">
-          <button onClick={addToCart} disabled={outOfStock} className="btn-outline">
+          <button onClick={addToCart} disabled={cannotBuy} className="btn-outline">
             {added ? t('product.added') : t('product.addToCart')}
           </button>
-          <button onClick={buyNow} disabled={outOfStock} className="btn-primary">
+          <button onClick={buyNow} disabled={cannotBuy} className="btn-primary">
             {t('product.buyNow')}
           </button>
         </div>

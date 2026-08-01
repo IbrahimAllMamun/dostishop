@@ -1,11 +1,12 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { Product, Variant } from '@/lib/types';
 import { formatTk, toNumber } from '@/lib/format';
 import { useCart } from '@/store/cart';
 import { useT } from '@/i18n/I18nProvider';
+import { VariantPicker, attributeGroups, resolveVariant } from './VariantPicker';
 
 export function variantLabel(v: Variant): string {
   return [v.size, v.color].filter(Boolean).join(' / ') || v.sku || 'Default';
@@ -19,8 +20,17 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
   const t = useT();
   const add = useCart((s) => s.add);
   const variants = product.variants ?? [];
-  const [variant, setVariant] = useState<Variant | null>(
-    variants.find((v) => v.stockQty > 0) ?? variants[0] ?? null,
+  const groups = useMemo(() => attributeGroups(variants), [variants]);
+  const [picked, setPicked] = useState<Record<string, string>>(() => {
+    const seed = variants.find((v) => v.stockQty > 0) ?? variants[0];
+    if (!seed) return {};
+    return Object.fromEntries(
+      (seed.attributes ?? []).map((a) => [a.value.attribute.slug, a.value.value]),
+    );
+  });
+  const variant = useMemo(
+    () => (groups.length ? resolveVariant(variants, groups, picked) : (variants[0] ?? null)),
+    [variants, groups, picked],
   );
   const [mounted, setMounted] = useState(false);
   // The parent unmounts us on close, so the exit animation has to finish first
@@ -48,8 +58,13 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
   const image = product.images?.[0]?.url;
   const price = toNumber(variant?.priceOverride ?? product.salePrice ?? product.basePrice);
   const outOfStock = variant ? variant.stockQty <= 0 : false;
+  // Null variant = the shopper has not finished choosing; adding now would put
+  // an item in the cart with no variant attached.
+  const unresolved = groups.length > 0 && !variant;
+  const cannotBuy = outOfStock || unresolved;
 
   function addToCart() {
+    if (cannotBuy) return;
     add({
       productId: product.id,
       slug: product.slug,
@@ -102,38 +117,18 @@ export function QuickView({ product, onClose }: { product: Product; onClose: () 
           </button>
         </div>
 
-        {variants.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-medium">{t('product.options')}</p>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((v, i) => {
-                const selected = variant?.id === v.id;
-                const disabled = v.stockQty <= 0;
-                return (
-                  <button
-                    key={v.id}
-                    onClick={() => setVariant(v)}
-                    disabled={disabled}
-                    // Chips arrive just after the panel, one after another
-                    style={closing ? undefined : { animationDelay: `${140 + i * 40}ms` }}
-                    className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95 ${
-                      closing ? '' : 'animate-scale-in'
-                    } ${
-                      selected
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-ink/15 text-ink hover:border-ink'
-                    } ${disabled ? 'cursor-not-allowed opacity-40 line-through active:scale-100' : ''}`}
-                  >
-                    {variantLabel(v)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <div className="mt-4">
+          <VariantPicker
+            variants={variants}
+            groups={groups}
+            picked={picked}
+            onPick={(slug, value) => setPicked((p) => ({ ...p, [slug]: value }))}
+            optionsLabel={t('product.options')}
+          />
+        </div>
 
         <div className="mt-5 flex gap-2">
-          <button onClick={addToCart} disabled={outOfStock} className="btn-primary flex-1">
+          <button onClick={addToCart} disabled={cannotBuy} className="btn-primary flex-1">
             {outOfStock ? t('card.soldOut') : t('product.addToCart')}
           </button>
           <Link href={`/product/${product.slug}`} className="btn-outline whitespace-nowrap">

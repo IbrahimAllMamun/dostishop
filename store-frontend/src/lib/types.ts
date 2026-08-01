@@ -39,11 +39,22 @@ export interface ProductImage {
   sortOrder: number;
 }
 
+export interface VariantAttributeValue {
+  value: {
+    id: string;
+    value: string;
+    attribute: { name: string; slug: string };
+  };
+}
+
 export interface Variant {
   id: string;
   sku?: string | null;
+  /** Denormalised copies, kept for cart labels and legacy CSV-imported rows */
   size?: string | null;
   color?: string | null;
+  /** The normalised definition — one entry per attribute this variant fixes */
+  attributes?: VariantAttributeValue[];
   priceOverride?: Money | null;
   stockQty: number;
 }
