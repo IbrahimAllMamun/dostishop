@@ -241,7 +241,7 @@ export function DialogsProvider({ children }: { children: React.ReactNode }) {
                     onClick={() => settle(true)}
                     className={
                       danger && request.kind === 'confirm'
-                        ? 'btn bg-sale text-white shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-sale/90 hover:shadow-float active:scale-[0.97]'
+                        ? 'btn bg-sale text-canvas shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-sale/90 hover:shadow-float active:scale-[0.97]'
                         : 'btn-primary'
                     }
                   >

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
-import { TableSkeleton } from '@/components/Skeleton';
+import { DataTable, type Column } from '@/components/DataTable';
 import { formatTk } from '@/lib/format';
 import { useDialogs } from '@/components/Dialogs';
 import type { Shop } from '@/lib/types';
@@ -69,16 +69,95 @@ export function AdminShops() {
     }
   }
 
+  const columns: Column<Shop>[] = [
+    {
+      key: 'name',
+      header: 'Shop',
+      sortable: true,
+      value: (s) => s.name,
+      render: (s) => (
+        <>
+          <div className="font-medium">{s.name}</div>
+          <div className="text-xs text-muted-foreground">/{s.slug}</div>
+        </>
+      ),
+    },
+    {
+      key: 'owner',
+      header: 'Owner',
+      sortable: true,
+      value: (s) => s.owner?.name ?? '',
+      render: (s) => (
+        <>
+          <div>{s.owner?.name}</div>
+          <div className="text-xs text-muted-foreground">{s.owner?.email}</div>
+        </>
+      ),
+    },
+    {
+      key: 'commission',
+      header: 'Commission',
+      sortable: true,
+      value: (s) => (s.commissionRate ? Number(s.commissionRate) : 0),
+      render: (s) => (s.commissionRate ? `${Number(s.commissionRate)}%` : '—'),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      value: (s) => s.status,
+      render: (s) => <StatusBadge status={s.status} />,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (s) => (
+        <div className="flex flex-wrap gap-2">
+          {s.status !== 'ACTIVE' && (
+            <button
+              disabled={busy === s.id}
+              onClick={() => setStatus(s.id, 'ACTIVE')}
+              className="btn-primary btn-sm"
+            >
+              Approve
+            </button>
+          )}
+          {s.status !== 'SUSPENDED' && (
+            <button
+              disabled={busy === s.id}
+              onClick={() => setStatus(s.id, 'SUSPENDED')}
+              className="btn-ghost btn-sm"
+            >
+              Suspend
+            </button>
+          )}
+          <button
+            onClick={() => resetPassword(s)}
+            className="btn-ghost btn-sm"
+            title="Generate a temporary password for the owner"
+          >
+            Reset pw
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Shops</h1>
-        <div className="flex gap-2">
+        <h1 className="text-2xl font-bold tracking-[-0.02em]">Shops</h1>
+        <div className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`badge ${filter === f ? 'bg-ink text-white' : 'bg-sand text-ink'}`}
+              aria-pressed={filter === f}
+              className={`badge transition-[background-color,color,transform] duration-200 ease-out active:scale-95 ${
+                filter === f
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-sand text-ink hover:bg-ink/10'
+              }`}
             >
               {f}
             </button>
@@ -86,76 +165,14 @@ export function AdminShops() {
         </div>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-ink/5">
-              <th className="th">Shop</th>
-              <th className="th">Owner</th>
-              <th className="th">Commission</th>
-              <th className="th">Status</th>
-              <th className="th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <TableSkeleton cols={5} />
-            ) : shops.length === 0 ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={5}>
-                  No shops.
-                </td>
-              </tr>
-            ) : (
-              shops.map((s) => (
-                <tr key={s.id} className="border-b border-ink/5 last:border-0">
-                  <td className="td">
-                    <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-muted-foreground">/{s.slug}</div>
-                  </td>
-                  <td className="td">
-                    <div>{s.owner?.name}</div>
-                    <div className="text-xs text-muted-foreground">{s.owner?.email}</div>
-                  </td>
-                  <td className="td">{s.commissionRate ? `${Number(s.commissionRate)}%` : '—'}</td>
-                  <td className="td">
-                    <StatusBadge status={s.status} />
-                  </td>
-                  <td className="td">
-                    <div className="flex gap-2">
-                      {s.status !== 'ACTIVE' && (
-                        <button
-                          disabled={busy === s.id}
-                          onClick={() => setStatus(s.id, 'ACTIVE')}
-                          className="btn-primary btn-sm"
-                        >
-                          Approve
-                        </button>
-                      )}
-                      {s.status !== 'SUSPENDED' && (
-                        <button
-                          disabled={busy === s.id}
-                          onClick={() => setStatus(s.id, 'SUSPENDED')}
-                          className="btn-ghost btn-sm"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      <button
-                        onClick={() => resetPassword(s)}
-                        className="btn-ghost btn-sm"
-                        title="Generate a temporary password for the owner"
-                      >
-                        Reset pw
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={shops}
+        getRowId={(s) => s.id}
+        loading={loading}
+        searchPlaceholder="Search shops or owners…"
+        empty="No shops."
+      />
     </div>
   );
 }

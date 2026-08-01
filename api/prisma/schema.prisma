@@ -110,6 +110,8 @@ model Category {
   name      String
   slug      String     @unique
   imageUrl  String?
+  // Lucide icon name (e.g. "ShoppingBag") shown when there is no imageUrl
+  icon      String?
   parentId  String?
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")

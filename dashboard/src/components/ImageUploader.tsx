@@ -60,7 +60,7 @@ export function ImageUploader({
             <button
               type="button"
               onClick={() => removeAt(i)}
-              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink/70 text-xs text-white"
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink/70 text-xs text-canvas"
               aria-label="Remove image"
             >
               ✕

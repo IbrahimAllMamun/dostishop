@@ -8,6 +8,9 @@ import { Prisma } from '@prisma/client';
 export const listCategories = asyncHandler(async (_req, res) => {
   const categories = await prisma.category.findMany({
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    // Product counts are shown on both dashboard category pages. This is the
+    // storefront's category endpoint too, so keep it to one query.
+    include: { _count: { select: { products: true } } },
   });
   res.json({ categories });
 });
@@ -41,7 +44,7 @@ async function assertCanMutate(req: Request, id: string) {
 }
 
 export const createCategory = asyncHandler(async (req, res) => {
-  const { name, parentId, imageUrl, sortOrder } = req.body;
+  const { name, parentId, imageUrl, icon, sortOrder } = req.body;
   if (parentId) await assertValidParent(parentId);
 
   let slug = slugify(name);
@@ -56,6 +59,7 @@ export const createCategory = asyncHandler(async (req, res) => {
       slug,
       parentId: parentId ?? null,
       imageUrl,
+      icon,
       sortOrder: sortOrder ?? 0,
       // Admin-created categories are platform-owned from the start (null owner)
       createdById: req.user?.role === 'VENDOR' ? req.user.sub : null,
@@ -66,13 +70,14 @@ export const createCategory = asyncHandler(async (req, res) => {
 
 export const updateCategory = asyncHandler(async (req, res) => {
   const existing = await assertCanMutate(req, req.params.id);
-  const { name, parentId, imageUrl, sortOrder } = req.body;
+  const { name, parentId, imageUrl, icon, sortOrder } = req.body;
   const data: Prisma.CategoryUpdateInput = {};
   if (name !== undefined) {
     data.name = name;
     data.slug = slugify(name);
   }
   if (imageUrl !== undefined) data.imageUrl = imageUrl;
+  if (icon !== undefined) data.icon = icon;
   if (sortOrder !== undefined) data.sortOrder = sortOrder;
   if (parentId !== undefined) {
     if (parentId) {
@@ -88,7 +93,8 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
   // An admin curating a vendor's category takes it over for good. Reordering
   // alone is housekeeping, not curation, so it does not lock the category.
-  const isCuration = name !== undefined || parentId !== undefined || imageUrl !== undefined;
+  const isCuration =
+    name !== undefined || parentId !== undefined || imageUrl !== undefined || icon !== undefined;
   if (req.user?.role === 'SUPER_ADMIN' && existing.createdById && !existing.adminLocked && isCuration) {
     data.adminLocked = true;
   }

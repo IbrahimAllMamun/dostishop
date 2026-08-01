@@ -3,17 +3,20 @@ import { Lock, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useDialogs } from '@/components/Dialogs';
+import { CategoryIcon } from '@/components/CategoryIcon';
+import { CategoryEditDialog } from '@/components/CategoryEditDialog';
 import type { Category } from '@/lib/types';
 
 export function VendorCategories() {
   const userId = useAuth((s) => s.user?.id);
-  const { confirm, notify, prompt } = useDialogs();
+  const { confirm, notify } = useDialogs();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editing, setEditing] = useState<Category | null>(null);
 
   function load() {
     api
@@ -52,27 +55,6 @@ export function VendorCategories() {
     }
   }
 
-  async function rename(c: Category) {
-    const next = await prompt({
-      title: 'Rename category',
-      description: 'Every shop sees this name, so keep it generic.',
-      label: 'Name',
-      defaultValue: c.name,
-      confirmLabel: 'Rename',
-    });
-    if (!next || next.trim() === c.name) return;
-    try {
-      await api.patch(`/categories/${c.id}`, { name: next.trim() });
-      load();
-    } catch (err) {
-      await notify({
-        title: 'Could not rename',
-        description: err instanceof Error ? err.message : 'Failed',
-        tone: 'danger',
-      });
-    }
-  }
-
   async function remove(c: Category) {
     const hasChildren = childrenOf(c.id).length > 0;
     const ok = await confirm({
@@ -101,8 +83,8 @@ export function VendorCategories() {
       return (
         <div className="flex items-center gap-1">
           <button
-            onClick={() => rename(c)}
-            aria-label={`Rename ${c.name}`}
+            onClick={() => setEditing(c)}
+            aria-label={`Edit ${c.name}`}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-[color,background-color,transform] duration-200 ease-out hover:bg-muted hover:text-primary active:scale-90"
           >
             <Pencil className="h-4 w-4" />
@@ -128,6 +110,29 @@ export function VendorCategories() {
       );
     }
     return null;
+  }
+
+  function Row({ c, depth }: { c: Category; depth: number }) {
+    return (
+      <div
+        className={`flex min-h-12 items-center gap-3 pr-4 ${depth ? 'py-1.5 pl-10' : 'px-4 py-2'}`}
+      >
+        {depth > 0 && <span aria-hidden className="text-muted-foreground">└</span>}
+        <CategoryIcon
+          icon={c.icon}
+          imageUrl={c.imageUrl}
+          name={c.name}
+          className={depth ? 'h-7 w-7' : 'h-9 w-9'}
+        />
+        <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
+        <span className="text-xs text-muted-foreground">
+          {c._count?.products ?? 0} product{(c._count?.products ?? 0) === 1 ? '' : 's'}
+        </span>
+        <div className="ml-auto">
+          <Actions c={c} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -169,29 +174,24 @@ export function VendorCategories() {
 
       <div className="card divide-y divide-ink/5">
         {loading ? (
-          <p className="p-4 text-muted-foreground">Loading…</p>
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="skeleton h-9 w-full" />
+            ))}
+          </div>
         ) : (
-          tops.map((top) => (
-            <div key={top.id}>
-              <div className="flex min-h-11 items-center justify-between gap-3 px-4 py-2">
-                <span className="font-medium">{top.name}</span>
-                <Actions c={top} />
-              </div>
+          tops.map((top, i) => (
+            <div key={top.id} style={{ animationDelay: `${Math.min(i, 10) * 25}ms` }} className="animate-row-in">
+              <Row c={top} depth={0} />
               {childrenOf(top.id).map((sub) => (
-                <div
-                  key={sub.id}
-                  className="flex min-h-11 items-center justify-between gap-3 py-1.5 pl-8 pr-4 text-sm"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-muted-foreground">└</span> {sub.name}
-                  </span>
-                  <Actions c={sub} />
-                </div>
+                <Row key={sub.id} c={sub} depth={1} />
               ))}
             </div>
           ))
         )}
       </div>
+
+      <CategoryEditDialog category={editing} onClose={() => setEditing(null)} onSaved={load} />
     </div>
   );
 }

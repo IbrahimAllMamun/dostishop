@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { Trash2 } from 'lucide-react';
 import { formatTk } from '@/lib/format';
+import { DataTable, type Column } from '@/components/DataTable';
 import { useDialogs } from '@/components/Dialogs';
 import type { Coupon } from '@/lib/types';
 
@@ -66,9 +68,69 @@ export function AdminCoupons() {
     setCoupons((cs) => cs.filter((x) => x.id !== id));
   }
 
+  const columns: Column<Coupon>[] = [
+    {
+      key: 'code',
+      header: 'Code',
+      sortable: true,
+      value: (c) => c.code,
+      render: (c) => <span className="font-mono font-medium">{c.code}</span>,
+    },
+    {
+      key: 'discount',
+      header: 'Discount',
+      sortable: true,
+      value: (c) => Number(c.value),
+      render: (c) => (c.type === 'PERCENTAGE' ? `${Number(c.value)}%` : formatTk(c.value)),
+    },
+    {
+      key: 'minOrder',
+      header: 'Min order',
+      sortable: true,
+      value: (c) => Number(c.minOrder ?? 0),
+      render: (c) => formatTk(c.minOrder),
+    },
+    {
+      key: 'usage',
+      header: 'Usage',
+      sortable: true,
+      value: (c) => c.usageCount,
+      render: (c) => `${c.usageCount}${c.usageLimit ? ` / ${c.usageLimit}` : ''}`,
+    },
+    {
+      key: 'active',
+      header: 'Active',
+      sortable: true,
+      value: (c) => (c.isActive ? 'Active' : 'Off'),
+      render: (c) => (
+        <button
+          onClick={() => toggle(c)}
+          aria-pressed={c.isActive}
+          className={`${c.isActive ? 'badge-success' : 'badge-neutral'} transition-transform duration-200 ease-out active:scale-95`}
+        >
+          {c.isActive ? 'Active' : 'Off'}
+        </button>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      render: (c) => (
+        <button
+          onClick={() => remove(c.id)}
+          aria-label={`Delete coupon ${c.code}`}
+          className="row-action ml-auto hover:bg-sale/10 hover:text-sale"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Coupons</h1>
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold tracking-[-0.02em]">Coupons</h1>
 
       <form onSubmit={create} className="card grid gap-3 p-4 sm:grid-cols-6">
         <div className="sm:col-span-2">
@@ -132,62 +194,14 @@ export function AdminCoupons() {
         </div>
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-ink/5">
-              <th className="th">Code</th>
-              <th className="th">Discount</th>
-              <th className="th">Min order</th>
-              <th className="th">Usage</th>
-              <th className="th">Active</th>
-              <th className="th"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={6}>
-                  Loading…
-                </td>
-              </tr>
-            ) : coupons.length === 0 ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={6}>
-                  No coupons yet.
-                </td>
-              </tr>
-            ) : (
-              coupons.map((c) => (
-                <tr key={c.id} className="border-b border-ink/5 last:border-0">
-                  <td className="td font-medium">{c.code}</td>
-                  <td className="td">
-                    {c.type === 'PERCENTAGE' ? `${Number(c.value)}%` : formatTk(c.value)}
-                  </td>
-                  <td className="td">{formatTk(c.minOrder)}</td>
-                  <td className="td">
-                    {c.usageCount}
-                    {c.usageLimit ? ` / ${c.usageLimit}` : ''}
-                  </td>
-                  <td className="td">
-                    <button
-                      onClick={() => toggle(c)}
-                      className={`badge ${c.isActive ? 'bg-success/15 text-success' : 'bg-ink/10'}`}
-                    >
-                      {c.isActive ? 'Active' : 'Off'}
-                    </button>
-                  </td>
-                  <td className="td text-right">
-                    <button onClick={() => remove(c.id)} className="text-sm text-muted-foreground hover:text-sale">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={coupons}
+        getRowId={(c) => c.id}
+        loading={loading}
+        searchPlaceholder="Search codes…"
+        empty="No coupons yet."
+      />
     </div>
   );
 }

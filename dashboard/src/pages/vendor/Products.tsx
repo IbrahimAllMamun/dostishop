@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Download, Plus, Upload } from 'lucide-react';
 import { api, API_URL } from '@/lib/api';
 import { useAuth } from '@/store/auth';
-import { formatTk } from '@/lib/format';
-import { TableSkeleton } from '@/components/Skeleton';
+import { formatTk, formatDate } from '@/lib/format';
+import { DataTable, type Column } from '@/components/DataTable';
 import { useDialogs } from '@/components/Dialogs';
 import { ProductEditDialog } from './ProductEditDialog';
 import type { Product } from '@/lib/types';
+
+function stockOf(p: Product) {
+  return (p.variants ?? []).reduce((n, v) => n + v.stockQty, 0);
+}
 
 export function VendorProducts() {
   const { notify } = useDialogs();
@@ -25,10 +30,6 @@ export function VendorProducts() {
   }
 
   useEffect(load, []);
-
-  function stockOf(p: Product) {
-    return (p.variants ?? []).reduce((n, v) => n + v.stockQty, 0);
-  }
 
   async function exportCsv() {
     const token = useAuth.getState().token;
@@ -81,111 +82,125 @@ export function VendorProducts() {
     reader.readAsText(file);
   }
 
+  const columns: Column<Product>[] = [
+    {
+      key: 'name',
+      header: 'Product',
+      sortable: true,
+      value: (p) => p.name,
+      render: (p) => (
+        <div className="flex items-center gap-3">
+          {p.images?.[0]?.url ? (
+            <img src={p.images[0].url} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <span className="h-10 w-10 shrink-0 rounded-lg bg-muted" />
+          )}
+          <span className="font-medium">{p.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'id',
+      header: 'Product ID',
+      value: (p) => p.id,
+      className: 'text-muted-foreground',
+      render: (p) => <span className="font-mono text-xs">#{p.id.slice(-6).toUpperCase()}</span>,
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      sortable: true,
+      value: (p) => Number(p.salePrice ?? p.basePrice),
+      render: (p) => (
+        <>
+          {formatTk(p.salePrice ?? p.basePrice)}
+          {p.salePrice && (
+            <span className="ml-1 text-xs text-muted-foreground line-through">
+              {formatTk(p.basePrice)}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'stock',
+      header: 'Stock',
+      sortable: true,
+      value: stockOf,
+      render: (p) => {
+        const n = stockOf(p);
+        if (n === 0) return <span className="badge-danger">Out of stock</span>;
+        return <span className={n <= 3 ? 'font-medium text-warn' : ''}>{n}</span>;
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      value: (p) => (p.isActive ? 'Active' : 'Hidden'),
+      render: (p) =>
+        p.isActive ? (
+          <span className="badge-success">Active</span>
+        ) : (
+          <span className="badge-neutral">Hidden</span>
+        ),
+    },
+    {
+      key: 'created',
+      header: 'Added',
+      sortable: true,
+      value: (p) => p.createdAt ?? '',
+      className: 'text-muted-foreground',
+      render: (p) => (p.createdAt ? formatDate(p.createdAt) : '—'),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <div className="flex gap-2">
-          <button onClick={exportCsv} className="btn-ghost btn-sm">
-            ⬇ Export CSV
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={importing}
-            className="btn-ghost btn-sm"
-          >
-            {importing ? 'Importing…' : '⬆ Import CSV'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => importCsv(e.target.files)}
-          />
-          <Link to="/vendor/products/new" className="btn-primary btn-sm">
-            + Add product
-          </Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">Products</h1>
+          <p className="text-sm text-muted-foreground">Select a product to edit it.</p>
         </div>
       </div>
 
       {importMsg && (
-        <div className="rounded-lg bg-sand/70 px-4 py-2 text-sm">{importMsg}</div>
+        <div className="animate-fade-up rounded-lg bg-sand/70 px-4 py-2 text-sm">{importMsg}</div>
       )}
 
-      <p className="text-sm text-muted-foreground">
-        Select a product to edit it.
-      </p>
-
-      <div className="card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-ink/5">
-              <th className="th">Product</th>
-              <th className="th">Price</th>
-              <th className="th">Stock</th>
-              <th className="th">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <TableSkeleton cols={4} />
-            ) : products.length === 0 ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={4}>
-                  No products yet. Click “Add product”.
-                </td>
-              </tr>
-            ) : (
-              products.map((p) => (
-                <tr
-                  key={p.id}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Edit ${p.name}`}
-                  onClick={() => setEditing(p)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setEditing(p);
-                    }
-                  }}
-                  className="cursor-pointer border-b border-ink/5 transition-colors duration-150 last:border-0 hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                >
-                  <td className="td">
-                    <div className="flex items-center gap-3">
-                      {p.images?.[0]?.url && (
-                        <img
-                          src={p.images[0].url}
-                          alt=""
-                          className="h-10 w-10 rounded-lg object-cover"
-                        />
-                      )}
-                      <span className="font-medium">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="td">
-                    {formatTk(p.salePrice ?? p.basePrice)}
-                    {p.salePrice && (
-                      <span className="ml-1 text-xs text-muted-foreground line-through">
-                        {formatTk(p.basePrice)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="td">
-                    <span className={stockOf(p) <= 3 ? 'text-warn' : ''}>{stockOf(p)}</span>
-                  </td>
-                  <td className="td">
-                    <span className={`badge ${p.isActive ? 'bg-success/15 text-success' : 'bg-ink/10'}`}>
-                      {p.isActive ? 'Active' : 'Hidden'}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={products}
+        getRowId={(p) => p.id}
+        loading={loading}
+        onRowClick={setEditing}
+        searchPlaceholder="Search products…"
+        empty="No products yet. Click “Add product”."
+        toolbar={
+          <>
+            <button onClick={exportCsv} className="btn-ghost btn-sm">
+              <Download className="h-3.5 w-3.5" /> Export
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="btn-ghost btn-sm"
+            >
+              <Upload className="h-3.5 w-3.5" /> {importing ? 'Importing…' : 'Import'}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => importCsv(e.target.files)}
+            />
+            <Link to="/vendor/products/new" className="btn-primary btn-sm">
+              <Plus className="h-3.5 w-3.5" /> Add product
+            </Link>
+          </>
+        }
+      />
 
       <ProductEditDialog
         product={editing}

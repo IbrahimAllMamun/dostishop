@@ -48,7 +48,7 @@ export function VendorAnalytics() {
                 className="w-full rounded-t bg-primary/70 transition group-hover:bg-primary"
                 style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 4 : 1)}%` }}
               />
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 text-xs text-white group-hover:block">
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 text-xs text-canvas group-hover:block">
                 {d.date.slice(5)} · {formatTk(d.revenue)}
               </div>
             </div>

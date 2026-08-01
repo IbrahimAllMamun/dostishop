@@ -108,7 +108,7 @@ export function VendorOrders() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`badge ${tab === t.key ? 'bg-ink text-white' : 'bg-sand text-ink'}`}
+              className={`badge transition-[background-color,color,transform] duration-200 ease-out active:scale-95 ${tab === t.key ? 'bg-primary text-primary-foreground' : 'bg-sand text-ink hover:bg-ink/10'}`}
             >
               {t.label}
             </button>

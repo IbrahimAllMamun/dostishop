@@ -3,32 +3,58 @@
 @tailwind utilities;
 
 @layer base {
-  /* shadcn semantic tokens, mapped to the Boutique BD brand palette.
-     Values are HSL triplets (Tailwind v3 convention: hsl(var(--token))). */
+  /* Every colour is an HSL triplet consumed as `hsl(var(--token) / <alpha>)`.
+     `.dark` below re-declares the same names, so no component knows the theme. */
   :root {
-    --background: 34 28% 95.1%; /* canvas  #F6F3EF */
-    --foreground: 30 6.3% 12.5%; /* ink     #22201E */
+    color-scheme: light;
 
-    --card: 0 0% 100%; /* surface #FFFFFF */
+    /* ---- Brand ---- */
+    --ink: 30 6.3% 12.5%; /* body text  #22201E */
+    --canvas: 34 28% 95.1%; /* page bg    #F6F3EF */
+    --surface: 0 0% 100%; /* card bg    #FFFFFF */
+    --sand: 34 36.8% 88.8%; /* #EDE4D8 */
+    --gold: 39 49% 57%; /* #C7A15A */
+    --sale: 6 63% 46%; /* #C0392B */
+    --success: 157 46% 33%; /* #2E7D5B */
+    --warn: 43 89% 38%; /* #B8860B */
+
+    /* Text sitting ON a 15%-alpha tint of the same hue. The fill value itself
+       only reaches ~3:1 there, which fails AA for badge-sized text, so the
+       foreground is a deliberately darker shade. Measured, not guessed. */
+    --success-strong: 157 54% 22%;
+    --warn-strong: 40 92% 25%;
+    --sale-strong: 6 68% 36%;
+    --primary-strong: 346 46% 34%;
+
+    /* The sidebar is dark in BOTH themes — it never follows `ink` */
+    --sidebar: 30 8% 11%;
+    --sidebar-foreground: 34 20% 92%;
+
+    /* ---- shadcn semantics, mapped to the brand ---- */
+    --background: 34 28% 95.1%;
+    --foreground: 30 6.3% 12.5%;
+
+    --card: 0 0% 100%;
     --card-foreground: 30 6.3% 12.5%;
     --popover: 0 0% 100%;
     --popover-foreground: 30 6.3% 12.5%;
 
-    --primary: 346 36.7% 46.5%; /* clay rose #A24B5F */
+    --primary: 346 36.7% 46.5%; /* clay rose #A24B5F — 5.7:1 against white */
+    --primary-dark: 346 37% 36%; /* hover: deeper */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 34 36.8% 88.8%; /* sand #EDE4D8 */
+    --secondary: 34 36.8% 88.8%; /* sand */
     --secondary-foreground: 30 6.3% 12.5%;
 
     --muted: 34 36.8% 88.8%; /* subtle surface = sand */
-    --muted-foreground: 30 7.1% 50.6%; /* secondary text #8A8178 */
+    --muted-foreground: 30 7.5% 40%; /* secondary text — 5.5:1 on canvas */
 
     /* shadcn's `accent` is the subtle hover surface (menu items, ghost buttons),
        not a brand accent — keep it quiet. Gold stays available as `bg-gold`. */
-    --accent: 34 36.8% 88.8%; /* sand #EDE4D8 */
+    --accent: 34 36.8% 88.8%;
     --accent-foreground: 30 6.3% 12.5%;
 
-    --destructive: 6 63.4% 46.1%; /* sale red #C0392B */
+    --destructive: 6 63% 46%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 34 22.9% 86.3%;
@@ -37,10 +63,62 @@
 
     --radius: 0.5rem;
   }
-}
 
-:root {
-  color-scheme: light;
+  /* Warm dark, derived from ink — deliberately not the blue-black that most
+     admin themes default to, so the product still reads as Dosti Shop.
+     Accents are lifted in lightness because the light-mode values sit at
+     33-46% L and would fall under 4.5:1 against a dark surface. */
+  .dark {
+    color-scheme: dark;
+
+    --ink: 34 22% 92%; /* text flips light; `border-ink/5` becomes a light hairline */
+    --canvas: 30 8% 8%;
+    --surface: 30 7% 12.5%;
+    --sand: 30 7% 19%;
+    --gold: 40 55% 65%;
+    --sale: 6 68% 64%;
+    --success: 157 42% 55%;
+    --warn: 43 72% 60%;
+
+    /* On dark, the tint is dark and the text must go lighter instead */
+    --success-strong: 157 45% 66%;
+    --warn-strong: 43 75% 68%;
+    --sale-strong: 6 75% 72%;
+    --primary-strong: 346 58% 74%;
+
+    --sidebar: 30 9% 6%;
+    --sidebar-foreground: 34 20% 90%;
+
+    --background: 30 8% 8%;
+    --foreground: 34 22% 92%;
+
+    --card: 30 7% 12.5%;
+    --card-foreground: 34 22% 92%;
+    --popover: 30 7% 15%;
+    --popover-foreground: 34 22% 92%;
+
+    /* Lifted to 62% L: 5.6:1 as text on the dark canvas, and dark text sits on
+       it for solid fills — the light-mode rose would have failed both. */
+    --primary: 346 48% 62%;
+    --primary-dark: 346 52% 70%;
+    --primary-foreground: 346 45% 10%;
+
+    --secondary: 30 7% 19%;
+    --secondary-foreground: 34 22% 92%;
+
+    --muted: 30 7% 19%;
+    --muted-foreground: 34 10% 66%; /* 5.9:1 on the dark canvas */
+
+    --accent: 30 7% 19%;
+    --accent-foreground: 34 22% 92%;
+
+    --destructive: 6 68% 58%;
+    --destructive-foreground: 30 20% 8%;
+
+    --border: 30 6% 23%;
+    --input: 30 6% 23%;
+    --ring: 346 48% 62%;
+  }
 }
 
 html,
@@ -72,6 +150,10 @@ body {
   @apply bg-canvas text-ink;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
+  /* Colour-only crossfade on theme change; nothing here moves or reflows */
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out;
 }
 
 @layer components {
@@ -79,38 +161,65 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-primary text-white shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-primary-dark hover:shadow-float active:scale-[0.97] disabled:active:scale-100;
+    @apply btn bg-primary text-primary-foreground shadow-lift transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-primary-dark hover:shadow-float active:scale-[0.97] disabled:active:scale-100;
   }
   .btn-ghost {
-    @apply btn border border-ink/15 text-ink transition-[border-color,background-color,transform] duration-200 ease-out hover:border-ink hover:bg-ink/5 active:scale-[0.97];
+    @apply btn border border-ink/15 text-ink transition-[border-color,background-color,transform] duration-200 ease-out hover:border-ink/40 hover:bg-ink/5 active:scale-[0.97];
   }
   /* Skeleton block with a sweeping highlight — replaces "Loading…" text */
   .skeleton {
     @apply relative overflow-hidden rounded-md bg-muted;
   }
   .skeleton::after {
-    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent;
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-surface/80 to-transparent;
     content: '';
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }
   .input {
-    @apply w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20;
   }
   .label {
     @apply mb-1 block text-sm font-medium;
   }
+  /* Base surface. `card-elevated` is the floating tier (popovers, dialogs). */
   .card {
     @apply rounded-xl bg-surface shadow-sm ring-1 ring-ink/5;
   }
+  .card-elevated {
+    @apply rounded-xl bg-surface shadow-float ring-1 ring-ink/5;
+  }
+  /* Card header row: title left, actions right — the rhythm every widget uses */
+  .card-head {
+    @apply flex items-center justify-between gap-3 border-b border-ink/5 px-5 py-4;
+  }
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .badge-success {
+    @apply badge bg-success/15 text-success-strong;
+  }
+  .badge-warn {
+    @apply badge bg-warn/15 text-warn-strong;
+  }
+  .badge-danger {
+    @apply badge bg-sale/15 text-sale-strong;
+  }
+  .badge-info {
+    @apply badge bg-primary/15 text-primary-strong;
+  }
+  .badge-neutral {
+    @apply badge bg-ink/10 text-muted-foreground;
   }
   .th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
   }
   .td {
     @apply px-4 py-3 text-sm;
+  }
+  /* Icon-only row action. Always paired with an aria-label at the call site. */
+  .row-action {
+    @apply flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-[color,background-color,transform] duration-200 ease-out hover:bg-muted active:scale-90;
   }
 }

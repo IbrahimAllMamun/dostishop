@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useDialogs } from '@/components/Dialogs';
+import { CategoryIcon } from '@/components/CategoryIcon';
+import { CategoryEditDialog } from '@/components/CategoryEditDialog';
 import type { Category } from '@/lib/types';
 
 interface TreeNode extends Category {
@@ -14,7 +16,7 @@ function buildTree(categories: Category[]): TreeNode[] {
 }
 
 export function AdminCategories() {
-  const { confirm, notify, prompt } = useDialogs();
+  const { confirm, notify } = useDialogs();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
@@ -23,6 +25,7 @@ export function AdminCategories() {
   const [error, setError] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState('');
+  const [editing, setEditing] = useState<Category | null>(null);
 
   function load() {
     api
@@ -78,25 +81,6 @@ export function AdminCategories() {
       load();
     } catch (err) {
       await fail('Could not delete', err);
-    }
-  }
-
-  async function rename(c: Category) {
-    const newName = await prompt({
-      title: 'Rename category',
-      description: c.createdById
-        ? 'This category was added by a vendor — renaming it hands ownership to the platform.'
-        : undefined,
-      label: 'Name',
-      defaultValue: c.name,
-      confirmLabel: 'Rename',
-    });
-    if (!newName || newName.trim() === c.name) return;
-    try {
-      await api.patch(`/categories/${c.id}`, { name: newName.trim() });
-      load();
-    } catch (err) {
-      await fail('Could not rename', err);
     }
   }
 
@@ -178,8 +162,17 @@ export function AdminCategories() {
       >
         <div className="flex items-center gap-2">
           {depth > 0 && <span className="text-muted-foreground">└</span>}
+          <CategoryIcon
+            icon={c.icon}
+            imageUrl={c.imageUrl}
+            name={c.name}
+            className={depth ? 'h-7 w-7' : 'h-9 w-9'}
+          />
           <span className={depth ? 'text-sm' : 'font-medium'}>{c.name}</span>
           <span className="text-xs text-muted-foreground">/{c.slug}</span>
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {c._count?.products ?? 0} product{(c._count?.products ?? 0) === 1 ? '' : 's'}
+          </span>
           {c.createdById &&
             (c.adminLocked ? (
               <span
@@ -225,8 +218,8 @@ export function AdminCategories() {
           >
             ↓
           </button>
-          <button onClick={() => rename(c)} className="text-primary hover:underline">
-            Rename
+          <button onClick={() => setEditing(c)} className="text-primary hover:underline">
+            Edit
           </button>
           <button onClick={() => remove(c, hasChildren)} className="text-muted-foreground hover:text-sale">
             Delete
@@ -238,7 +231,7 @@ export function AdminCategories() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Categories</h1>
+      <h1 className="text-2xl font-bold tracking-[-0.02em]">Categories</h1>
 
       <form onSubmit={add} className="card flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-48 flex-1">
@@ -286,6 +279,13 @@ export function AdminCategories() {
         Vendors can also add categories when creating products. Two levels max: category →
         subcategory.
       </p>
+
+      <CategoryEditDialog
+        category={editing}
+        onClose={() => setEditing(null)}
+        onSaved={load}
+        warnOnCuration
+      />
     </div>
   );
 }

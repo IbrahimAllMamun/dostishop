@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
+import { DataTable, type Column } from '@/components/DataTable';
 import { formatTk, formatDate } from '@/lib/format';
 import type { Payout } from '@/lib/types';
 
@@ -38,11 +39,75 @@ export function AdminPayouts() {
     setPayouts((ps) => ps.map((p) => (p.id === id ? { ...p, status: 'PAID' } : p)));
   }
 
+  const columns: Column<Payout>[] = [
+    {
+      key: 'shop',
+      header: 'Shop',
+      sortable: true,
+      value: (p) => p.shop?.name ?? '',
+      render: (p) => <span className="font-medium">{p.shop?.name}</span>,
+    },
+    {
+      key: 'period',
+      header: 'Period',
+      sortable: true,
+      value: (p) => p.periodFrom,
+      className: 'whitespace-nowrap text-xs text-muted-foreground',
+      render: (p) => `${formatDate(p.periodFrom)} → ${formatDate(p.periodTo)}`,
+    },
+    {
+      key: 'orders',
+      header: 'Orders',
+      sortable: true,
+      value: (p) => p._count?.subOrders ?? 0,
+      render: (p) => p._count?.subOrders ?? '—',
+    },
+    {
+      key: 'gross',
+      header: 'Gross',
+      sortable: true,
+      value: (p) => Number(p.gross),
+      render: (p) => formatTk(p.gross),
+    },
+    {
+      key: 'commission',
+      header: 'Commission',
+      sortable: true,
+      value: (p) => Number(p.commission),
+      className: 'text-muted-foreground',
+      render: (p) => formatTk(p.commission),
+    },
+    {
+      key: 'net',
+      header: 'Net payable',
+      sortable: true,
+      value: (p) => Number(p.net),
+      render: (p) => <span className="font-semibold">{formatTk(p.net)}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      value: (p) => p.status,
+      render: (p) => <StatusBadge status={p.status} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (p) =>
+        p.status === 'PENDING' ? (
+          <button onClick={() => markPaid(p.id)} className="btn-primary btn-sm">
+            Mark paid
+          </button>
+        ) : null,
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Vendor payouts</h1>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">Vendor payouts</h1>
           <p className="text-sm text-muted-foreground">
             Bundles every delivered, unsettled sub-order into one payout per shop.
           </p>
@@ -54,60 +119,14 @@ export function AdminPayouts() {
 
       {msg && <div className="rounded-lg bg-sand/70 px-4 py-2 text-sm">{msg}</div>}
 
-      <div className="card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-ink/5">
-              <th className="th">Shop</th>
-              <th className="th">Period</th>
-              <th className="th">Orders</th>
-              <th className="th">Gross</th>
-              <th className="th">Commission</th>
-              <th className="th">Net payable</th>
-              <th className="th">Status</th>
-              <th className="th"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={8}>
-                  Loading…
-                </td>
-              </tr>
-            ) : payouts.length === 0 ? (
-              <tr>
-                <td className="td text-muted-foreground" colSpan={8}>
-                  No payouts yet. Mark sub-orders DELIVERED, then generate.
-                </td>
-              </tr>
-            ) : (
-              payouts.map((p) => (
-                <tr key={p.id} className="border-b border-ink/5 last:border-0">
-                  <td className="td font-medium">{p.shop?.name}</td>
-                  <td className="td whitespace-nowrap text-xs text-muted-foreground">
-                    {formatDate(p.periodFrom)} → {formatDate(p.periodTo)}
-                  </td>
-                  <td className="td">{p._count?.subOrders ?? '—'}</td>
-                  <td className="td">{formatTk(p.gross)}</td>
-                  <td className="td text-muted-foreground">{formatTk(p.commission)}</td>
-                  <td className="td font-semibold">{formatTk(p.net)}</td>
-                  <td className="td">
-                    <StatusBadge status={p.status} />
-                  </td>
-                  <td className="td">
-                    {p.status === 'PENDING' && (
-                      <button onClick={() => markPaid(p.id)} className="btn-primary btn-sm">
-                        Mark paid
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={payouts}
+        getRowId={(p) => p.id}
+        loading={loading}
+        searchPlaceholder="Search shops…"
+        empty="No payouts yet. Mark sub-orders DELIVERED, then generate."
+      />
     </div>
   );
 }

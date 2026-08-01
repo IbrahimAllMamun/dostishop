@@ -40,7 +40,7 @@ export function AdminAbandoned() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`badge ${filter === f ? 'bg-ink text-white' : 'bg-sand text-ink'}`}
+              className={`badge transition-[background-color,color,transform] duration-200 ease-out active:scale-95 ${filter === f ? 'bg-primary text-primary-foreground' : 'bg-sand text-ink hover:bg-ink/10'}`}
             >
               {f}
             </button>

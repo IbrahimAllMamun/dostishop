@@ -21,10 +21,14 @@ export interface Category {
   slug: string;
   parentId?: string | null;
   sortOrder: number;
+  imageUrl?: string | null;
+  /** Lucide icon name, shown when there is no imageUrl */
+  icon?: string | null;
   /** Vendor who created it; null for seeded or admin-created categories */
   createdById?: string | null;
   /** An admin has curated it — the original vendor can no longer change it */
   adminLocked?: boolean;
+  _count?: { products: number };
 }
 
 export interface ProductImage {
@@ -56,6 +60,7 @@ export interface Product {
   isFeatured: boolean;
   images?: ProductImage[];
   variants?: Variant[];
+  createdAt?: string;
 }
 
 export interface OrderItem {
