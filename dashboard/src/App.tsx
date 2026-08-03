@@ -26,6 +26,7 @@ import { ShopProfile } from '@/pages/vendor/ShopProfile';
 import { Attributes } from '@/pages/Attributes';
 import { Colors } from '@/pages/Colors';
 import { Gallery } from '@/pages/Gallery';
+import { Notifications } from '@/pages/Notifications';
 import { AdminOrderDetail } from '@/pages/admin/OrderDetail';
 import { AdminReport } from '@/pages/admin/Report';
 import { VendorOrderDetail } from '@/pages/vendor/OrderDetail';
@@ -58,6 +59,7 @@ export function App() {
             <Route path="/admin/attributes" element={<Attributes />} />
             <Route path="/admin/colors" element={<Colors />} />
             <Route path="/admin/gallery" element={<Gallery />} />
+            <Route path="/admin/notifications" element={<Notifications />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/admin/reviews" element={<AdminReviews />} />
             <Route path="/admin/abandoned" element={<AdminAbandoned />} />
@@ -89,6 +91,7 @@ export function App() {
             <Route path="/vendor/attributes" element={<Attributes />} />
             <Route path="/vendor/colors" element={<Colors />} />
             <Route path="/vendor/gallery" element={<Gallery />} />
+            <Route path="/vendor/notifications" element={<Notifications />} />
             <Route path="/vendor/shop" element={<ShopProfile />} />
           </Route>
 

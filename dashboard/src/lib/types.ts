@@ -38,6 +38,23 @@ export interface ProductImage {
   sortOrder?: number;
 }
 
+export type NotificationType =
+  | 'ORDER_PLACED'
+  | 'SHOP_APPROVED'
+  | 'PAYOUT_SETTLED'
+  | 'LOW_STOCK';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  /** Dashboard path this notification opens */
+  link?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
 /** A folder in the shop's media library. Flat — folders do not nest. */
 export interface MediaFolder {
   id: string;

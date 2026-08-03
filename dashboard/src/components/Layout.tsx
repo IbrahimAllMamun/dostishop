@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Bell,
   ChevronsLeft,
   LogOut,
   Menu,
@@ -16,6 +15,7 @@ import {
 import { useAuth } from '@/store/auth';
 import { useTheme } from '@/store/theme';
 import { Breadcrumbs } from './Breadcrumbs';
+import { NotificationBell } from './NotificationBell';
 import { navFor, type NavGroup } from './nav';
 import {
   DropdownMenu,
@@ -243,9 +243,7 @@ export function Layout() {
               {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>
 
-            <button aria-label="Notifications" className="row-action relative hover:text-ink">
-              <Bell className="h-[18px] w-[18px]" />
-            </button>
+            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 text-left transition-colors duration-200 hover:bg-muted">

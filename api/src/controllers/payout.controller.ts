@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { round2 } from '../utils/helpers';
+import { notifyPayoutSettled } from '../services/notify.service';
 
 /** Bundle every DELIVERED, not-yet-settled sub-order into one payout per shop. */
 export const generatePayouts = asyncHandler(async (_req, res) => {
@@ -61,10 +62,20 @@ export const adminListPayouts = asyncHandler(async (_req, res) => {
 });
 
 export const markPayoutPaid = asyncHandler(async (req, res) => {
+  const before = await prisma.payout.findUnique({
+    where: { id: req.params.id },
+    select: { status: true },
+  });
   const payout = await prisma.payout.update({
     where: { id: req.params.id },
     data: { status: 'PAID' },
   });
+
+  // Only on the transition, so re-marking a settled payout stays silent
+  if (before?.status !== 'PAID') {
+    notifyPayoutSettled(payout.shopId, String(payout.net));
+  }
+
   res.json({ payout });
 });
 

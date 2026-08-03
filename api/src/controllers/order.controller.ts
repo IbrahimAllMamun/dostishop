@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { generateOrderNo, round2 } from '../utils/helpers';
 import { assertCouponUsable, computeDiscount } from '../services/coupon.service';
+import { notifyLowStock, notifyOrderPlaced } from '../services/notify.service';
 import { Coupon, OrderStatus, Prisma } from '@prisma/client';
 
 interface CheckoutItem {
@@ -210,6 +211,19 @@ export const checkout = asyncHandler(async (req, res) => {
   prisma.abandonedCheckout
     .updateMany({ where: { phone, status: 'OPEN' }, data: { status: 'RECOVERED' } })
     .catch(() => {});
+
+  // Both of these run after the transaction commits, so a slow or failing
+  // notification can never roll back a paid order.
+  notifyOrderPlaced({
+    orderNo: order.orderNo,
+    subOrders: order.subOrders.map((s) => ({ id: s.id, shopId: s.shopId, subtotal: s.subtotal })),
+    customerName: order.customerName,
+  });
+  notifyLowStock(
+    order.subOrders.flatMap((s) =>
+      s.items.map((i) => i.variantId).filter((id): id is string => Boolean(id)),
+    ),
+  ).catch(() => {});
 
   res.status(201).json({ message: 'Order placed', order });
 });

@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
 import { ShopStatus } from '@prisma/client';
+import { notifyShopApproved } from '../services/notify.service';
 
 // ---- Public ----
 
@@ -65,6 +66,17 @@ export const adminListShops = asyncHandler(async (req, res) => {
 
 export const updateShopStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
+  const before = await prisma.shop.findUnique({
+    where: { id: req.params.id },
+    select: { status: true },
+  });
   const shop = await prisma.shop.update({ where: { id: req.params.id }, data: { status } });
+
+  // Only on the transition into ACTIVE. Re-saving an already-active shop is a
+  // no-op to the vendor and should not congratulate them again.
+  if (status === 'ACTIVE' && before?.status !== 'ACTIVE') {
+    notifyShopApproved(shop.id, shop.name);
+  }
+
   res.json({ shop });
 });

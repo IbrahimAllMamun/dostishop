@@ -109,6 +109,7 @@ model Shop {
   payouts        Payout[]
   mediaAssets    MediaAsset[]
   mediaFolders   MediaFolder[]
+  notifications  Notification[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -320,6 +321,39 @@ model ProductAttributeValue {
 
   @@id([productId, valueId])
   @@index([valueId])
+}
+
+// ---------- Notifications ----------
+
+enum NotificationType {
+  ORDER_PLACED
+  SHOP_APPROVED
+  PAYOUT_SETTLED
+  LOW_STOCK
+}
+
+/// Addressed to a shop, or to the platform when `shopId` is null. There is no
+/// per-user inbox because a shop has exactly one owner and customers never
+/// authenticate — the two roles the rest of the system already assumes.
+model Notification {
+  id      String           @id @default(cuid())
+  shopId  String?
+  shop    Shop?            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  type    NotificationType
+  title   String
+  body    String?
+  /// Dashboard path this notification opens, e.g. /vendor/orders/<id>
+  link    String?
+  /// Handle for a condition that repeats. Low stock on the same variant would
+  /// otherwise raise a fresh row on every checkout; instead the unread one
+  /// stands until it is read.
+  key       String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([shopId, readAt])
+  @@index([shopId, type, key])
+  @@index([createdAt])
 }
 
 // ---------- Media library ----------
