@@ -107,6 +107,8 @@ model Shop {
   products       Product[]
   subOrders      SubOrder[]
   payouts        Payout[]
+  mediaAssets    MediaAsset[]
+  mediaFolders   MediaFolder[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -318,6 +320,52 @@ model ProductAttributeValue {
 
   @@id([productId, valueId])
   @@index([valueId])
+}
+
+// ---------- Media library ----------
+// Every image a shop has uploaded, so one can be reused across products
+// instead of being uploaded again. Scoped by `shopId`; a null shop means the
+// platform owns it (admin banners), which keeps admins out of vendor libraries.
+
+/// Flat, deliberately. Nested folders need a tree UI, breadcrumbs and a move
+/// dialog to earn their keep, and a shop's library is a few dozen images.
+model MediaFolder {
+  id        String       @id @default(cuid())
+  shopId    String?
+  shop      Shop?        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  assets    MediaAsset[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([shopId, name])
+  @@index([shopId])
+}
+
+model MediaAsset {
+  id       String       @id @default(cuid())
+  shopId   String?
+  shop     Shop?        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  folderId String?
+  // Deleting a folder must not take the images with it — they fall back to
+  // "unfiled", which is recoverable; a cascade would not be.
+  folder   MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  /// Where the file actually lives — local /uploads in dev, Cloudinary in prod
+  url       String
+  /// Editable label. Starts as the uploaded filename.
+  name      String
+  mimeType  String?
+  sizeBytes Int?
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One row per file per shop, so re-uploading or re-running the backfill
+  // cannot double up the library
+  @@unique([shopId, url])
+  @@index([shopId])
+  @@index([folderId])
 }
 
 // ---------- Orders ----------

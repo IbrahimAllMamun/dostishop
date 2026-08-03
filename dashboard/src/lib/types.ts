@@ -38,6 +38,28 @@ export interface ProductImage {
   sortOrder?: number;
 }
 
+/** A folder in the shop's media library. Flat — folders do not nest. */
+export interface MediaFolder {
+  id: string;
+  name: string;
+  _count?: { assets: number };
+}
+
+export interface MediaAsset {
+  id: string;
+  url: string;
+  name: string;
+  folderId?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  width?: number | null;
+  height?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Product images pointing at this URL — non-zero blocks deletion */
+  usedBy: number;
+}
+
 /** A colour in the shared palette: a name and the hex the swatch is painted in. */
 export interface Color {
   id: string;

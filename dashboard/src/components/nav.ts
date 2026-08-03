@@ -3,6 +3,7 @@ import {
   Image,
   LayoutDashboard,
   ListTree,
+  Images,
   Package,
   Palette,
   SlidersHorizontal,
@@ -42,6 +43,7 @@ export const adminNav: NavGroup[] = [
       { to: '/admin/categories', label: 'Categories', icon: ListTree },
       { to: '/admin/attributes', label: 'Attributes', icon: SlidersHorizontal },
       { to: '/admin/colors', label: 'Colours', icon: Palette },
+      { to: '/admin/gallery', label: 'Gallery', icon: Images },
       { to: '/admin/banners', label: 'Banners', icon: Image },
     ],
   },
@@ -77,6 +79,7 @@ export const vendorNav: NavGroup[] = [
       { to: '/vendor/categories', label: 'Categories', icon: ListTree },
       { to: '/vendor/attributes', label: 'Attributes', icon: SlidersHorizontal },
       { to: '/vendor/colors', label: 'Colours', icon: Palette },
+      { to: '/vendor/gallery', label: 'Gallery', icon: Images },
     ],
   },
   {
