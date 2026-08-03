@@ -85,14 +85,33 @@ export function matching(variants: Variant[], picked: Record<string, string>): V
 }
 
 /**
- * Choosing a value adopts a whole variant, rather than changing one axis and
- * hoping the result exists.
+ * Is there a variant carrying `value` on `slug` that also honours the picks
+ * already made on the other axes? In stock unless `anyStock` says otherwise.
+ */
+export function combinationExists(
+  variants: Variant[],
+  picked: Record<string, string>,
+  slug: string,
+  value: string,
+  requireStock = true,
+): boolean {
+  const wanted = { ...picked, [slug]: value };
+  return variants.some(
+    (v) =>
+      (!requireStock || v.stockQty > 0) &&
+      Object.entries(wanted).every(([s, val]) => !val || valueFor(v, s) === val),
+  );
+}
+
+/**
+ * Each axis is chosen independently: picking a colour keeps the size.
  *
- * Real catalogues are sparse — three variants can span three attributes with
- * no shared axis at all. Holding the other picks fixed would then make every
- * neighbouring combination invalid and strand the shopper on whichever variant
- * loaded first. So: take the in-stock variant carrying this value that agrees
- * with the most of the current selection, and adopt all of its values.
+ * Only when the resulting combination does not exist does this fall back to
+ * adopting a whole variant. That still matters — the older seeded products
+ * predate the matrix editor and are sparse, so three variants can span three
+ * attributes with no shared axis, and holding the other picks fixed there would
+ * strand the shopper on whichever variant loaded first. Dense catalogues never
+ * reach the fallback.
  */
 export function pickValue(
   variants: Variant[],
@@ -101,11 +120,18 @@ export function pickValue(
   slug: string,
   value: string,
 ): Record<string, string> {
+  // The independent case: hold every other axis exactly where it is. An
+  // existing but sold-out combination still counts — telling the shopper this
+  // size is out in that colour beats silently moving them to another size.
+  const held = { ...picked, [slug]: value };
+  if (matching(variants, held).length > 0) return held;
+
   const carriers = variants.filter((v) => valueFor(v, slug) === value);
   const inStock = carriers.filter((v) => v.stockQty > 0);
   const pool = inStock.length ? inStock : carriers;
-  if (!pool.length) return { ...picked, [slug]: value };
+  if (!pool.length) return held;
 
+  // Repair by adopting the variant that agrees with the most of the selection
   let best = pool[0];
   let bestScore = -1;
   for (const v of pool) {
@@ -155,24 +181,39 @@ export function VariantPicker({
   const fixed = useMemo(() => fixedGroups(groups), [groups]);
 
   /**
-   * A value is offered when some in-stock variant carries it at all — not only
-   * when it fits alongside the current picks. Clicking repairs the rest of the
-   * selection, so anything reachable stays clickable.
+   * With independent axes a value falls into one of four states, and they need
+   * different words — "out of stock" and "doesn't come in that combination" are
+   * different facts, and a generated matrix is full of the first.
+   *
+   * - `fits`    — in stock alongside the picks already made; the normal case.
+   * - `soldOut` — that exact combination exists but has no stock. Clickable:
+   *   the shopper is entitled to land on it and read why.
+   * - `stale`   — no such combination, but the value is in stock elsewhere.
+   *   Clicking repairs the other axes.
+   * - `dead`    — nothing carries it in stock anywhere, so it is disabled.
+   *
+   * Compared against `picked` minus this axis, or every value would judge
+   * itself against the shopper's existing pick and only the selected one would
+   * ever fit.
    */
   const availability = useMemo(() => {
-    const map = new Map<string, boolean>();
+    const map = new Map<string, { fits: boolean; soldOut: boolean; stale: boolean }>();
     for (const g of choices) {
+      const others = { ...picked };
+      delete others[g.slug];
       for (const option of g.values) {
-        map.set(
-          `${g.slug}:${option.value}`,
-          variants.some((v) => v.stockQty > 0 && v.attributes?.some(
-            (a) => a.value.attribute.slug === g.slug && a.value.value === option.value,
-          )),
-        );
+        const inStockHere = combinationExists(variants, others, g.slug, option.value);
+        const existsHere = combinationExists(variants, others, g.slug, option.value, false);
+        const inStockAnywhere = combinationExists(variants, {}, g.slug, option.value);
+        map.set(`${g.slug}:${option.value}`, {
+          fits: inStockHere,
+          soldOut: existsHere && !inStockHere,
+          stale: !existsHere && inStockAnywhere,
+        });
       }
     }
     return map;
-  }, [variants, choices]);
+  }, [variants, choices, picked]);
 
   if (!groups.length) return null;
 
@@ -212,9 +253,24 @@ export function VariantPicker({
           <div className="flex flex-wrap gap-2" role="group" aria-label={g.name}>
             {g.values.map((option) => {
               const selected = picked[g.slug] === option.value;
-              const available = availability.get(`${g.slug}:${option.value}`) ?? false;
+              const { fits, soldOut, stale } = availability.get(`${g.slug}:${option.value}`) ?? {
+                fits: false,
+                soldOut: false,
+                stale: false,
+              };
+              const dead = !fits && !soldOut && !stale;
               const onPickThis = () =>
                 onPick(pickValue(variants, groups, picked, g.slug, option.value));
+
+              // Screen readers get the reason, not just the absence of one
+              const label = fits
+                ? option.value
+                : stale
+                  ? `${option.value} — not available with your current selection`
+                  : `${option.value} — out of stock`;
+              // Struck through when unbuyable; merely stale stays whole, since
+              // one click brings it back
+              const struck = soldOut || dead;
 
               if (g.isColor && option.hex) {
                 return (
@@ -222,25 +278,21 @@ export function VariantPicker({
                     key={option.value}
                     type="button"
                     onClick={onPickThis}
-                    disabled={!available}
+                    disabled={dead}
                     aria-pressed={selected}
                     // The only label this control has — the swatch is decoration
-                    aria-label={
-                      available ? option.value : `${option.value} — out of stock`
-                    }
-                    title={option.value}
-                    className={`grid h-11 w-11 place-items-center rounded-full transition-[box-shadow,transform] duration-200 ease-out active:scale-95 ${
+                    aria-label={label}
+                    title={label}
+                    className={`grid h-11 w-11 place-items-center rounded-full transition-[box-shadow,transform,opacity] duration-200 ease-out active:scale-95 ${
                       selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface' : ''
-                    } ${available ? '' : 'cursor-not-allowed opacity-40 active:scale-100'}`}
+                    } ${fits ? '' : dead ? 'cursor-not-allowed opacity-40 active:scale-100' : 'opacity-45'}`}
                   >
                     <span
                       aria-hidden
                       style={{ backgroundColor: option.hex }}
                       className={`relative block h-8 w-8 rounded-full ${swatchRing(option.hex)}`}
                     >
-                      {/* Sold out reads as a struck-through swatch, matching the
-                          line-through the text chips use */}
-                      {!available && (
+                      {struck && (
                         <span className="absolute inset-0 grid place-items-center">
                           <span className="h-px w-9 -rotate-45 bg-ink/70" />
                         </span>
@@ -255,13 +307,17 @@ export function VariantPicker({
                   key={option.value}
                   type="button"
                   onClick={onPickThis}
-                  disabled={!available}
+                  disabled={dead}
                   aria-pressed={selected}
-                  className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95 ${
+                  aria-label={fits ? undefined : label}
+                  title={fits ? undefined : label}
+                  className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform,opacity] duration-200 ease-out active:scale-95 ${
                     selected
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-ink/15 text-ink hover:border-ink'
-                  } ${available ? '' : 'cursor-not-allowed opacity-40 line-through active:scale-100'}`}
+                  } ${fits ? '' : 'opacity-45'} ${struck ? 'line-through' : ''} ${
+                    dead ? 'cursor-not-allowed opacity-40 active:scale-100' : ''
+                  }`}
                 >
                   {option.value}
                 </button>
