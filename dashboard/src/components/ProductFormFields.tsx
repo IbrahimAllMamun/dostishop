@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -156,6 +156,28 @@ export function useProductForm(id?: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  /**
+   * The three pieces of variant state are interdependent: ticking an attribute
+   * changes the axes, which changes the rows. React does not expose a state
+   * update until the next render, so two toggles dispatched in one batch would
+   * both read the pre-batch value and the second would discard the first.
+   * Handlers therefore read from here and write through `commit`; the render
+   * body below resyncs it for updates that come from anywhere else.
+   */
+  const latest = useRef({ attributeIds, axisValueIds, variants });
+  latest.current = { attributeIds, axisValueIds, variants };
+
+  function commit(next: {
+    attributeIds?: string[];
+    axisValueIds?: Record<string, string[]>;
+    variants?: VariantRow[];
+  }) {
+    latest.current = { ...latest.current, ...next };
+    if (next.attributeIds) setAttributeIds(next.attributeIds);
+    if (next.axisValueIds) setAxisValueIds(next.axisValueIds);
+    if (next.variants) setVariants(next.variants);
+  }
+
   /** A row the vendor has not put anything into, so it is safe to discard. */
   const isUntouched = (r: VariantRow) =>
     !r.id && !(Number(r.stockQty) > 0) && !r.priceOverride;
@@ -210,27 +232,34 @@ export function useProductForm(id?: string) {
    * saves variant values along an axis it no longer claims.
    */
   function toggleAttribute(attr: Attribute) {
-    const on = attributeIds.includes(attr.id);
-    const nextIds = on ? attributeIds.filter((x) => x !== attr.id) : [...attributeIds, attr.id];
-    setAttributeIds(nextIds);
-    if (!on) return;
+    const current = latest.current;
+    const on = current.attributeIds.includes(attr.id);
+    const nextIds = on
+      ? current.attributeIds.filter((x) => x !== attr.id)
+      : [...current.attributeIds, attr.id];
+
+    if (!on) {
+      commit({ attributeIds: nextIds });
+      return;
+    }
 
     const ownValueIds = new Set(attr.values.map((v) => v.id));
-    const nextTicks = { ...axisValueIds };
+    const nextTicks = { ...current.axisValueIds };
     delete nextTicks[attr.id];
 
     setSpecValueIds((ids) => ids.filter((x) => !ownValueIds.has(x)));
-    setAxisValueIds(nextTicks);
-    setVariants(
-      reconcile(
-        variants.map((r) => ({
+    commit({
+      attributeIds: nextIds,
+      axisValueIds: nextTicks,
+      variants: reconcile(
+        current.variants.map((r) => ({
           ...r,
           attributeValueIds: r.attributeValueIds.filter((x) => !ownValueIds.has(x)),
         })),
         nextTicks,
         nextIds,
       ),
-    );
+    });
   }
 
   function toggleSpecValue(valueId: string) {
@@ -244,15 +273,18 @@ export function useProductForm(id?: string) {
    * follow immediately, so there is nothing to press afterwards.
    */
   function toggleAxisValue(attributeId: string, valueId: string) {
-    const current = axisValueIds[attributeId] ?? [];
+    const state = latest.current;
+    const ticked = state.axisValueIds[attributeId] ?? [];
     const next = {
-      ...axisValueIds,
-      [attributeId]: current.includes(valueId)
-        ? current.filter((x) => x !== valueId)
-        : [...current, valueId],
+      ...state.axisValueIds,
+      [attributeId]: ticked.includes(valueId)
+        ? ticked.filter((x) => x !== valueId)
+        : [...ticked, valueId],
     };
-    setAxisValueIds(next);
-    setVariants(reconcile(variants, next, attributeIds));
+    commit({
+      axisValueIds: next,
+      variants: reconcile(state.variants, next, state.attributeIds),
+    });
   }
 
   async function createCategory() {
