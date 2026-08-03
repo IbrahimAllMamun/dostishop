@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Wand2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ImageUploader } from '@/components/ImageUploader';
 import { Swatch, swatchInk } from '@/components/Swatch';
@@ -156,29 +156,80 @@ export function useProductForm(id?: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  /** A row the vendor has not put anything into, so it is safe to discard. */
+  const isUntouched = (r: VariantRow) =>
+    !r.id && !(Number(r.stockQty) > 0) && !r.priceOverride;
+
+  /**
+   * Rebuild the rows from the ticked values: one row per combination.
+   *
+   * Rows that already carry a combination keep their id, stock and price
+   * override. Rows that fall outside the new matrix are dropped only when the
+   * vendor never filled them in — anything with stock, a price override, or a
+   * saved id survives, because a stray click must not wipe a season's counts.
+   * Those survivors are flagged in the UI so they can be removed deliberately.
+   *
+   * Only ever called from a tick. Running it on load would be wrong: real
+   * catalogues are sparse, and three saved variants spanning three attributes
+   * would expand into eighteen rows the moment the form opened.
+   */
+  function reconcile(
+    rows: VariantRow[],
+    ticks: Record<string, string[]>,
+    selectedIds: string[],
+  ): VariantRow[] {
+    const axes = attributes.filter(
+      (a) => a.isVariant && selectedIds.includes(a.id) && (ticks[a.id] ?? []).length > 0,
+    );
+
+    // No axis ticked yet: collapse to a single default row, keeping any real data
+    if (!axes.length) {
+      const kept = rows.filter((r) => !isUntouched(r));
+      return kept.length ? kept : [{ ...emptyVariant }];
+    }
+
+    const combos = axes.reduce<string[][]>(
+      (acc, a) => acc.flatMap((prefix) => (ticks[a.id] ?? []).map((v) => [...prefix, v])),
+      [[]],
+    );
+    const target = new Map(combos.map((c) => [comboKey(c), c]));
+
+    // Keep rows that are still wanted, plus any the vendor has invested in
+    const kept = rows.filter((r) => target.has(comboKey(r.attributeValueIds)) || !isUntouched(r));
+    const seen = new Set(kept.map((r) => comboKey(r.attributeValueIds)));
+
+    const fresh = [...target.entries()]
+      .filter(([key]) => !seen.has(key))
+      .map(([, attributeValueIds]) => ({ ...emptyVariant, attributeValueIds }));
+
+    return [...kept, ...fresh];
+  }
+
   /**
    * Turning an attribute off has to take its traces with it, or the product
    * saves variant values along an axis it no longer claims.
    */
   function toggleAttribute(attr: Attribute) {
     const on = attributeIds.includes(attr.id);
-    if (!on) {
-      setAttributeIds((ids) => [...ids, attr.id]);
-      return;
-    }
+    const nextIds = on ? attributeIds.filter((x) => x !== attr.id) : [...attributeIds, attr.id];
+    setAttributeIds(nextIds);
+    if (!on) return;
+
     const ownValueIds = new Set(attr.values.map((v) => v.id));
-    setAttributeIds((ids) => ids.filter((x) => x !== attr.id));
+    const nextTicks = { ...axisValueIds };
+    delete nextTicks[attr.id];
+
     setSpecValueIds((ids) => ids.filter((x) => !ownValueIds.has(x)));
-    setAxisValueIds((m) => {
-      const next = { ...m };
-      delete next[attr.id];
-      return next;
-    });
-    setVariants((rows) =>
-      rows.map((r) => ({
-        ...r,
-        attributeValueIds: r.attributeValueIds.filter((x) => !ownValueIds.has(x)),
-      })),
+    setAxisValueIds(nextTicks);
+    setVariants(
+      reconcile(
+        variants.map((r) => ({
+          ...r,
+          attributeValueIds: r.attributeValueIds.filter((x) => !ownValueIds.has(x)),
+        })),
+        nextTicks,
+        nextIds,
+      ),
     );
   }
 
@@ -188,54 +239,20 @@ export function useProductForm(id?: string) {
     );
   }
 
-  function toggleAxisValue(attributeId: string, valueId: string) {
-    setAxisValueIds((m) => {
-      const current = m[attributeId] ?? [];
-      return {
-        ...m,
-        [attributeId]: current.includes(valueId)
-          ? current.filter((x) => x !== valueId)
-          : [...current, valueId],
-      };
-    });
-  }
-
   /**
-   * Build every combination of the ticked values, one variant row each.
-   *
-   * Additive on purpose: rows that already exist keep their id, stock and price
-   * override, and rows outside the new matrix are left alone rather than
-   * deleted. Generating is a convenience, not a destructive rebuild — a stray
-   * click should never wipe a season's stock counts.
+   * Ticking a value is the only edit the vendor makes to the matrix — the rows
+   * follow immediately, so there is nothing to press afterwards.
    */
-  function generateVariants(axes: Array<{ attributeId: string; valueIds: string[] }>): number {
-    const usable = axes.filter((a) => a.valueIds.length);
-    if (!usable.length) return 0;
-
-    const combos = usable.reduce<string[][]>(
-      (acc, axis) => acc.flatMap((prefix) => axis.valueIds.map((v) => [...prefix, v])),
-      [[]],
-    );
-
-    // Computed from the current state rather than inside the updater: the
-    // caller needs the count now, and an updater does not run until React
-    // re-renders (and may run twice under StrictMode).
-    const [first] = variants;
-    const isBlankPlaceholder =
-      variants.length === 1 &&
-      !first.id &&
-      !first.attributeValueIds.length &&
-      Number(first.stockQty) === 0 &&
-      !first.priceOverride;
-    const base = isBlankPlaceholder ? [] : variants;
-
-    const seen = new Set(base.map((r) => comboKey(r.attributeValueIds)));
-    const fresh = combos
-      .filter((c) => !seen.has(comboKey(c)))
-      .map((attributeValueIds) => ({ ...emptyVariant, attributeValueIds }));
-
-    if (fresh.length || isBlankPlaceholder) setVariants([...base, ...fresh]);
-    return fresh.length;
+  function toggleAxisValue(attributeId: string, valueId: string) {
+    const current = axisValueIds[attributeId] ?? [];
+    const next = {
+      ...axisValueIds,
+      [attributeId]: current.includes(valueId)
+        ? current.filter((x) => x !== valueId)
+        : [...current, valueId],
+    };
+    setAxisValueIds(next);
+    setVariants(reconcile(variants, next, attributeIds));
   }
 
   async function createCategory() {
@@ -324,7 +341,6 @@ export function useProductForm(id?: string) {
     toggleSpecValue,
     axisValueIds,
     toggleAxisValue,
-    generateVariants,
     newCatOpen,
     setNewCatOpen,
     newCatName,
@@ -399,7 +415,6 @@ export function ProductFields({ state }: { state: ProductFormState }) {
     toggleSpecValue,
     axisValueIds,
     toggleAxisValue,
-    generateVariants,
     newCatOpen,
     setNewCatOpen,
     newCatName,
@@ -423,23 +438,28 @@ export function ProductFields({ state }: { state: ProductFormState }) {
     [attributes, selected],
   );
 
-  const [generated, setGenerated] = useState<string | null>(null);
-  const pendingCombos = useMemo(
-    () => axes.reduce((n, a) => n * Math.max((axisValueIds[a.id] ?? []).length, 0), 1),
-    [axes, axisValueIds],
-  );
-  const canGenerate = axes.length > 0 && axes.every((a) => (axisValueIds[a.id] ?? []).length > 0);
+  /** Resolve a value id to its attribute and value, for the row labels. */
+  const valueIndex = useMemo(() => {
+    const map = new Map<string, { attribute: Attribute; value: AttributeValue }>();
+    for (const attribute of attributes) {
+      for (const value of attribute.values) map.set(value.id, { attribute, value });
+    }
+    return map;
+  }, [attributes]);
 
-  function runGenerate() {
-    const added = generateVariants(
-      axes.map((a) => ({ attributeId: a.id, valueIds: axisValueIds[a.id] ?? [] })),
+  /** The combinations the ticks currently describe, for spotting strays below. */
+  const wantedCombos = useMemo(() => {
+    const usable = axes.filter((a) => (axisValueIds[a.id] ?? []).length > 0);
+    if (!usable.length) return null;
+    return new Set(
+      usable
+        .reduce<string[][]>(
+          (acc, a) => acc.flatMap((prefix) => (axisValueIds[a.id] ?? []).map((v) => [...prefix, v])),
+          [[]],
+        )
+        .map((c) => comboKey(c)),
     );
-    setGenerated(
-      added === 0
-        ? 'Every combination already exists.'
-        : `Added ${added} variant${added === 1 ? '' : 's'}.`,
-    );
-  }
+  }, [axes, axisValueIds]);
 
   return (
     <>
@@ -683,121 +703,103 @@ export function ProductFields({ state }: { state: ProductFormState }) {
         </div>
       )}
 
-      {/* Variants */}
-      <div className="card space-y-4 p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Variants &amp; stock</h2>
-          <button
-            type="button"
-            onClick={() => setVariants((v) => [...v, { ...emptyVariant }])}
-            className="btn-ghost btn-sm"
-          >
-            + Add variant
-          </button>
+      {/* Options — tick what the product comes in; the rows below follow */}
+      {axes.length > 0 && (
+        <div className="card space-y-4 p-6">
+          <div>
+            <h2 className="font-semibold">Options</h2>
+            <p className="text-xs text-muted-foreground">
+              Tick the values this product comes in. A row appears below for every combination.
+            </p>
+          </div>
+          {axes.map((attr) => (
+            <div key={attr.id}>
+              <span className="label">{attr.name}</span>
+              {attr.values.length ? (
+                <div className="flex flex-wrap gap-2" role="group" aria-label={attr.name}>
+                  {attr.values.map((v, i) => (
+                    <ValueToggle
+                      key={v.id}
+                      value={v}
+                      index={i}
+                      selected={(axisValueIds[attr.id] ?? []).includes(v.id)}
+                      onToggle={() => toggleAxisValue(attr.id, v.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">This attribute has no values yet.</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Stock — one row per combination, nothing to choose here */}
+      <div className="card space-y-3 p-6">
+        <div>
+          <h2 className="font-semibold">Stock &amp; pricing</h2>
+          <p className="text-xs text-muted-foreground">
+            {axes.length === 0
+              ? 'No options selected, so this product has a single stock row.'
+              : `${variants.length} combination${variants.length === 1 ? '' : 's'}. Leave the price override blank to use the base price.`}
+          </p>
         </div>
 
-        {/* Generator: tick the values this product comes in, build the grid once */}
-        {axes.length > 0 && (
-          <div className="space-y-3 rounded-lg bg-canvas p-4">
-            <div>
-              <h3 className="text-sm font-medium">Build the combinations</h3>
-              <p className="text-xs text-muted-foreground">
-                Tick what this product comes in, then generate a row for each combination.
-                Existing rows keep their stock.
-              </p>
-            </div>
-            {axes.map((attr) => (
-              <div key={attr.id}>
-                <span className="label text-xs">{attr.name}</span>
-                {attr.values.length ? (
-                  <div className="flex flex-wrap gap-2" role="group" aria-label={attr.name}>
-                    {attr.values.map((v, i) => (
-                      <ValueToggle
-                        key={v.id}
-                        value={v}
-                        index={i}
-                        selected={(axisValueIds[attr.id] ?? []).includes(v.id)}
-                        onToggle={() => toggleAxisValue(attr.id, v.id)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">This attribute has no values yet.</p>
-                )}
-              </div>
-            ))}
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={runGenerate}
-                disabled={!canGenerate}
-                className="btn-primary btn-sm"
-              >
-                <Wand2 className="h-3.5 w-3.5" />
-                Generate {canGenerate ? `${pendingCombos} ` : ''}variant
-                {canGenerate && pendingCombos === 1 ? '' : 's'}
-              </button>
-              <p aria-live="polite" className="text-xs text-muted-foreground">
-                {generated ??
-                  (canGenerate ? '' : 'Tick at least one value on every axis.')}
-              </p>
-            </div>
+        {/* Column headers, so the two number fields are labelled once rather
+            than on every row — the thing that made this section noisy. */}
+        {variants.length > 0 && (
+          <div className="hidden gap-3 px-3 sm:grid sm:grid-cols-[1fr_7rem_9rem_auto]">
+            <span className="text-xs font-medium text-muted-foreground">
+              {axes.length ? 'Combination' : 'Default'}
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Stock</span>
+            <span className="text-xs font-medium text-muted-foreground">Price override</span>
+            <span className="w-16" />
           </div>
         )}
 
         {variants.map((v, idx) => {
-          /** Swap this row's pick for `attr`, leaving its other attributes alone. */
-          const setPick = (attr: Attribute, valueId: string) =>
-            setVariants((arr) =>
-              arr.map((x, i) => {
-                if (i !== idx) return x;
-                const otherAttrValueIds = x.attributeValueIds.filter(
-                  (id) => !attr.values.some((av) => av.id === id),
-                );
-                return {
-                  ...x,
-                  attributeValueIds: valueId ? [...otherAttrValueIds, valueId] : otherAttrValueIds,
-                };
-              }),
-            );
+          const parts = v.attributeValueIds
+            .map((id) => valueIndex.get(id))
+            .filter((p): p is { attribute: Attribute; value: AttributeValue } => Boolean(p))
+            .sort((a, b) => a.attribute.sortOrder - b.attribute.sortOrder);
+
+          // A row the ticks no longer ask for, kept because it holds real data
+          const stray = Boolean(wantedCombos && !wantedCombos.has(comboKey(v.attributeValueIds)));
 
           return (
             <div
               key={v.id ?? idx}
-              className="grid gap-2 rounded-lg bg-canvas p-3 sm:grid-cols-2 lg:grid-cols-4"
+              className={`grid animate-row-in items-center gap-3 rounded-lg p-3 sm:grid-cols-[1fr_7rem_9rem_auto] ${
+                stray ? 'bg-gold/10 ring-1 ring-inset ring-warn/30' : 'bg-canvas'
+              }`}
             >
-              {axes.map((attr) => {
-                const current = v.attributeValueIds.find((id) =>
-                  attr.values.some((av) => av.id === id),
-                );
-                const picked = attr.values.find((av) => av.id === current);
-                return (
-                  <div key={attr.id}>
-                    <label className="label text-xs">{attr.name}</label>
-                    <div className="flex items-center gap-2">
-                      {/* The select carries the name; the swatch beside it says
-                          which colour that name means. */}
-                      {picked?.color && <Swatch hex={picked.color.hexCode} name={picked.value} />}
-                      <select
-                        className="input"
-                        value={current ?? ''}
-                        onChange={(e) => setPick(attr, e.target.value)}
-                      >
-                        <option value="">— any —</option>
-                        {attr.values.map((av) => (
-                          <option key={av.id} value={av.id}>
-                            {av.value}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                {parts.length === 0 ? (
+                  <span className="text-muted-foreground">Single variant</span>
+                ) : (
+                  parts.map((p, i) => (
+                    <span key={p.value.id} className="inline-flex items-center gap-1.5">
+                      {i > 0 && <span className="text-muted-foreground">·</span>}
+                      {p.value.color && <Swatch hex={p.value.color.hexCode} size="sm" />}
+                      {p.value.value}
+                    </span>
+                  ))
+                )}
+                {stray && (
+                  <span className="badge-warn" title="Not in your current selection">
+                    not selected
+                  </span>
+                )}
+              </div>
 
               <div>
-                <label className="label text-xs">Stock</label>
+                <label className="sr-only" htmlFor={`stock-${idx}`}>
+                  Stock for {parts.map((p) => p.value.value).join(' ') || 'this product'}
+                </label>
                 <input
+                  id={`stock-${idx}`}
                   className="input"
                   type="number"
                   min="0"
@@ -810,8 +812,11 @@ export function ProductFields({ state }: { state: ProductFormState }) {
                 />
               </div>
               <div>
-                <label className="label text-xs">Price override</label>
+                <label className="sr-only" htmlFor={`price-${idx}`}>
+                  Price override for {parts.map((p) => p.value.value).join(' ') || 'this product'}
+                </label>
                 <input
+                  id={`price-${idx}`}
                   className="input"
                   type="number"
                   min="0"
@@ -825,26 +830,21 @@ export function ProductFields({ state }: { state: ProductFormState }) {
                 />
               </div>
 
-              {variants.length > 1 && (
-                <div className="flex items-end">
+              <div className="w-16">
+                {variants.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setVariants((arr) => arr.filter((_, i) => i !== idx))}
-                    className="btn-ghost btn-sm"
+                    aria-label={`Remove ${parts.map((p) => p.value.value).join(' ') || 'this row'}`}
+                    className="row-action hover:bg-sale/10 hover:text-sale"
                   >
-                    Remove
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
-
-        <p className="text-xs text-muted-foreground">
-          {axes.length === 0
-            ? 'No variant axes selected, so this product has a single stock row.'
-            : 'Stock controls availability. A row left on “any” for every axis is the product’s default.'}
-        </p>
       </div>
     </>
   );
