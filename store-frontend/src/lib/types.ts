@@ -39,12 +39,16 @@ export interface ProductImage {
   sortOrder: number;
 }
 
+export interface AttributeValueRef {
+  id: string;
+  value: string;
+  /** Present on values of a colour attribute — what the swatch is painted in */
+  color?: { name: string; hexCode: string } | null;
+  attribute: { name: string; slug: string; kind?: 'TEXT' | 'COLOR' };
+}
+
 export interface VariantAttributeValue {
-  value: {
-    id: string;
-    value: string;
-    attribute: { name: string; slug: string };
-  };
+  value: AttributeValueRef;
 }
 
 export interface Variant {
@@ -74,6 +78,8 @@ export interface Product {
   discountPct?: number;
   images: ProductImage[];
   variants?: Variant[];
+  /** Specification attributes — facts about the product, never a choice */
+  specValues?: Array<{ value: AttributeValueRef }>;
   shop?: { name: string; slug: string } | null;
   category?: { name: string; slug: string } | null;
 }

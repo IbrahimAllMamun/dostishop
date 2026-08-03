@@ -21,6 +21,16 @@ const variantSchema = z.object({
 // On update, a variant may carry an id (keep/update) or omit it (create new)
 const variantUpdateSchema = variantSchema.extend({ id: z.string().optional() });
 
+/**
+ * Which attributes this product uses — variant axes and specs alike. Absent
+ * leaves the selection untouched; [] clears it. The server derives nothing from
+ * the variants here: an axis the vendor has chosen but not yet filled in is a
+ * real state the form has to be able to save.
+ */
+const attributeIdsSchema = z.array(z.string()).max(20).optional();
+/** Chosen values for the non-variant (spec) attributes above. */
+const specValueIdsSchema = z.array(z.string()).max(100).optional();
+
 export const productCreateSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
@@ -32,6 +42,8 @@ export const productCreateSchema = z.object({
   isFeatured: z.boolean().optional(),
   images: z.array(imageSchema).optional(),
   variants: z.array(variantSchema).optional(),
+  attributeIds: attributeIdsSchema,
+  specValueIds: specValueIdsSchema,
 });
 
 export const productUpdateSchema = z.object({
@@ -45,4 +57,6 @@ export const productUpdateSchema = z.object({
   isFeatured: z.boolean().optional(),
   images: z.array(imageSchema).optional(),
   variants: z.array(variantUpdateSchema).optional(),
+  attributeIds: attributeIdsSchema,
+  specValueIds: specValueIdsSchema,
 });

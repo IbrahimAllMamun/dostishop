@@ -24,6 +24,7 @@ import { VendorOrders } from '@/pages/vendor/Orders';
 import { VendorAnalytics } from '@/pages/vendor/Analytics';
 import { ShopProfile } from '@/pages/vendor/ShopProfile';
 import { Attributes } from '@/pages/Attributes';
+import { Colors } from '@/pages/Colors';
 import { AdminOrderDetail } from '@/pages/admin/OrderDetail';
 import { AdminReport } from '@/pages/admin/Report';
 import { VendorOrderDetail } from '@/pages/vendor/OrderDetail';
@@ -54,6 +55,7 @@ export function App() {
             <Route path="/admin/shops" element={<AdminShops />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/attributes" element={<Attributes />} />
+            <Route path="/admin/colors" element={<Colors />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/admin/reviews" element={<AdminReviews />} />
             <Route path="/admin/abandoned" element={<AdminAbandoned />} />
@@ -83,6 +85,7 @@ export function App() {
             <Route path="/vendor/payouts" element={<VendorPayouts />} />
             <Route path="/vendor/categories" element={<VendorCategories />} />
             <Route path="/vendor/attributes" element={<Attributes />} />
+            <Route path="/vendor/colors" element={<Colors />} />
             <Route path="/vendor/shop" element={<ShopProfile />} />
           </Route>
 

@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ListTree,
   Package,
+  Palette,
   SlidersHorizontal,
   PieChart,
   Receipt,
@@ -40,6 +41,7 @@ export const adminNav: NavGroup[] = [
       { to: '/admin/shops', label: 'Shops', icon: Store },
       { to: '/admin/categories', label: 'Categories', icon: ListTree },
       { to: '/admin/attributes', label: 'Attributes', icon: SlidersHorizontal },
+      { to: '/admin/colors', label: 'Colours', icon: Palette },
       { to: '/admin/banners', label: 'Banners', icon: Image },
     ],
   },
@@ -74,6 +76,7 @@ export const vendorNav: NavGroup[] = [
       { to: '/vendor/products', label: 'Products', icon: Package },
       { to: '/vendor/categories', label: 'Categories', icon: ListTree },
       { to: '/vendor/attributes', label: 'Attributes', icon: SlidersHorizontal },
+      { to: '/vendor/colors', label: 'Colours', icon: Palette },
     ],
   },
   {

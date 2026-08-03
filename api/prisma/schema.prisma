@@ -69,6 +69,14 @@ enum AbandonedStatus {
   DISMISSED
 }
 
+/// How an attribute's values are rendered and edited. TEXT values are free
+/// strings; COLOR values are drawn from the `Color` registry so the storefront
+/// can paint a swatch instead of printing a word.
+enum AttributeKind {
+  TEXT
+  COLOR
+}
+
 // ---------- Identity ----------
 
 model User {
@@ -148,6 +156,10 @@ model Product {
   images      ProductImage[]
   variants    ProductVariant[]
   reviews     Review[]
+  /// The attributes this product uses — variant axes and spec attributes alike
+  attributes  ProductAttribute[]
+  /// Values for the spec attributes above
+  specValues  ProductAttributeValue[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
@@ -209,14 +221,18 @@ model ProductVariant {
 }
 
 // ---------- Attributes ----------
-// A registry of the dimensions a variant can vary along (Size, Color,
-// Material…). Vendors may add their own; ownership works exactly like
-// Category — the creator may edit until an admin curates it.
+// A registry of the dimensions a product varies along (Size, Color, Material…)
+// or is described by (Fabric, Warranty). Vendors may add their own; ownership
+// works exactly like Category — the creator may edit until an admin curates it.
 
-model Attribute {
+/// The shared colour palette. Kept as its own table rather than a hex column on
+/// AttributeValue so a colour is defined once and reused: two shops naming the
+/// same maroon get the same swatch, and correcting a hex fixes every product.
+model Color {
   id          String           @id @default(cuid())
-  name        String
-  slug        String           @unique
+  name        String           @unique
+  /// `#RRGGBB`, lowercase. Validated at the API boundary.
+  hexCode     String
   sortOrder   Int              @default(0)
   createdById String?
   adminLocked Boolean          @default(false)
@@ -227,16 +243,43 @@ model Attribute {
   @@index([createdById])
 }
 
-model AttributeValue {
+model Attribute {
   id          String             @id @default(cuid())
-  attributeId String
-  attribute   Attribute          @relation(fields: [attributeId], references: [id], onDelete: Cascade)
-  value       String
+  name        String
+  slug        String             @unique
+  kind        AttributeKind      @default(TEXT)
+  /// True: an axis variants differ along (Size, Colour) — it multiplies stock
+  /// rows. False: a product-level specification (Fabric, Warranty) that is
+  /// stated once per product and never creates a variant.
+  isVariant   Boolean            @default(true)
   sortOrder   Int                @default(0)
+  createdById String?
+  adminLocked Boolean            @default(false)
+  values      AttributeValue[]
+  products    ProductAttribute[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([createdById])
+}
+
+model AttributeValue {
+  id          String                  @id @default(cuid())
+  attributeId String
+  attribute   Attribute               @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  /// For COLOR attributes this mirrors `color.name`, kept in sync on write:
+  /// checkout labels, CSV export and the storefront facets all read strings.
+  value       String
+  /// Set only on values of a COLOR attribute.
+  colorId     String?
+  color       Color?                  @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  sortOrder   Int                     @default(0)
   variants    VariantAttribute[]
+  productSpecs ProductAttributeValue[]
 
   @@unique([attributeId, value])
   @@index([attributeId])
+  @@index([colorId])
 }
 
 /// Join table: a variant is defined by the set of values it carries.
@@ -247,6 +290,33 @@ model VariantAttribute {
   value     AttributeValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
 
   @@id([variantId, valueId])
+  @@index([valueId])
+}
+
+/// Which attributes a product actually uses. Without this the product form has
+/// to show every attribute in the registry on every product, and an axis the
+/// vendor has chosen but not yet filled in has nowhere to live.
+model ProductAttribute {
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeId String
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  sortOrder   Int       @default(0)
+
+  @@id([productId, attributeId])
+  @@index([attributeId])
+}
+
+/// The chosen values for a product's non-variant (spec) attributes. Many rows
+/// per attribute are allowed — "Features: Waterproof, Lightweight" is one
+/// attribute with two values.
+model ProductAttributeValue {
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  valueId   String
+  value     AttributeValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@id([productId, valueId])
   @@index([valueId])
 }
 

@@ -2,10 +2,18 @@
 import { useMemo } from 'react';
 import type { Variant } from '@/lib/types';
 
+export interface AttributeOption {
+  value: string;
+  /** Set when the value is backed by the colour palette — the swatch fill */
+  hex: string | null;
+}
+
 export interface AttributeGroup {
   slug: string;
   name: string;
-  values: string[];
+  /** True when every value carries a colour, so the row renders as swatches */
+  isColor: boolean;
+  values: AttributeOption[];
 }
 
 /** The value this variant carries for a given attribute, if any. */
@@ -25,12 +33,38 @@ export function attributeGroups(variants: Variant[]): AttributeGroup[] {
   for (const v of variants) {
     for (const a of v.attributes ?? []) {
       const { slug, name } = a.value.attribute;
-      const g = groups.get(slug) ?? { slug, name, values: [] };
-      if (!g.values.includes(a.value.value)) g.values.push(a.value.value);
+      const g = groups.get(slug) ?? { slug, name, isColor: false, values: [] };
+      if (!g.values.some((o) => o.value === a.value.value)) {
+        g.values.push({ value: a.value.value, hex: a.value.color?.hexCode ?? null });
+      }
       groups.set(slug, g);
     }
   }
+  // A row only becomes swatches when every one of its values has a colour.
+  // A half-painted row would read as "these three are unavailable".
+  for (const g of groups.values()) {
+    g.isColor = g.values.length > 0 && g.values.every((o) => Boolean(o.hex));
+  }
   return [...groups.values()];
+}
+
+/** Relative luminance per WCAG — decides what a swatch needs to stay visible. */
+function luminance(hex: string): number {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return 0.5;
+  const channels = [0, 2, 4].map((i) => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+/**
+ * A cream swatch on a cream page is invisible without a border, and a black one
+ * needs none. Strength follows the colour so both read as deliberate.
+ */
+function swatchRing(hex: string): string {
+  return luminance(hex) > 0.75 ? 'ring-1 ring-inset ring-ink/30' : 'ring-1 ring-inset ring-ink/10';
 }
 
 /** Attributes the shopper actually chooses between. */
@@ -128,11 +162,11 @@ export function VariantPicker({
   const availability = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const g of choices) {
-      for (const value of g.values) {
+      for (const option of g.values) {
         map.set(
-          `${g.slug}:${value}`,
+          `${g.slug}:${option.value}`,
           variants.some((v) => v.stockQty > 0 && v.attributes?.some(
-            (a) => a.value.attribute.slug === g.slug && a.value.value === value,
+            (a) => a.value.attribute.slug === g.slug && a.value.value === option.value,
           )),
         );
       }
@@ -148,9 +182,18 @@ export function VariantPicker({
       {fixed.length > 0 && (
         <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
           {fixed.map((g) => (
-            <div key={g.slug} className="flex gap-1.5">
+            <div key={g.slug} className="flex items-center gap-1.5">
               <dt className="text-muted">{g.name}</dt>
-              <dd className="font-medium">{g.values[0]}</dd>
+              <dd className="flex items-center gap-1.5 font-medium">
+                {g.values[0].hex && (
+                  <span
+                    aria-hidden
+                    style={{ backgroundColor: g.values[0].hex }}
+                    className={`inline-block h-3.5 w-3.5 rounded-full ${swatchRing(g.values[0].hex)}`}
+                  />
+                )}
+                {g.values[0].value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -158,6 +201,8 @@ export function VariantPicker({
 
       {choices.map((g) => (
         <div key={g.slug} className="space-y-2">
+          {/* The chosen value is named here as well as shown, so a swatch row
+              never leaves colour as the only carrier of the choice. */}
           <p className="text-sm font-medium">
             {g.name}
             {picked[g.slug] && (
@@ -165,14 +210,51 @@ export function VariantPicker({
             )}
           </p>
           <div className="flex flex-wrap gap-2" role="group" aria-label={g.name}>
-            {g.values.map((value) => {
-              const selected = picked[g.slug] === value;
-              const available = availability.get(`${g.slug}:${value}`) ?? false;
+            {g.values.map((option) => {
+              const selected = picked[g.slug] === option.value;
+              const available = availability.get(`${g.slug}:${option.value}`) ?? false;
+              const onPickThis = () =>
+                onPick(pickValue(variants, groups, picked, g.slug, option.value));
+
+              if (g.isColor && option.hex) {
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={onPickThis}
+                    disabled={!available}
+                    aria-pressed={selected}
+                    // The only label this control has — the swatch is decoration
+                    aria-label={
+                      available ? option.value : `${option.value} — out of stock`
+                    }
+                    title={option.value}
+                    className={`grid h-11 w-11 place-items-center rounded-full transition-[box-shadow,transform] duration-200 ease-out active:scale-95 ${
+                      selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface' : ''
+                    } ${available ? '' : 'cursor-not-allowed opacity-40 active:scale-100'}`}
+                  >
+                    <span
+                      aria-hidden
+                      style={{ backgroundColor: option.hex }}
+                      className={`relative block h-8 w-8 rounded-full ${swatchRing(option.hex)}`}
+                    >
+                      {/* Sold out reads as a struck-through swatch, matching the
+                          line-through the text chips use */}
+                      {!available && (
+                        <span className="absolute inset-0 grid place-items-center">
+                          <span className="h-px w-9 -rotate-45 bg-ink/70" />
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              }
+
               return (
                 <button
-                  key={value}
+                  key={option.value}
                   type="button"
-                  onClick={() => onPick(pickValue(variants, groups, picked, g.slug, value))}
+                  onClick={onPickThis}
                   disabled={!available}
                   aria-pressed={selected}
                   className={`min-h-11 rounded-full border px-4 text-sm transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95 ${
@@ -181,7 +263,7 @@ export function VariantPicker({
                       : 'border-ink/15 text-ink hover:border-ink'
                   } ${available ? '' : 'cursor-not-allowed opacity-40 line-through active:scale-100'}`}
                 >
-                  {value}
+                  {option.value}
                 </button>
               );
             })}

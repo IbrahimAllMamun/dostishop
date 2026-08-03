@@ -38,26 +38,47 @@ export interface ProductImage {
   sortOrder?: number;
 }
 
+/** A colour in the shared palette: a name and the hex the swatch is painted in. */
+export interface Color {
+  id: string;
+  name: string;
+  hexCode: string;
+  sortOrder: number;
+  createdById?: string | null;
+  adminLocked?: boolean;
+  /** How many attribute values reference it — deleting one in use fails */
+  _count?: { values: number };
+}
+
+export type AttributeKind = 'TEXT' | 'COLOR';
+
 export interface AttributeValue {
   id: string;
   attributeId: string;
   value: string;
   sortOrder: number;
-  /** How many variants carry this value — deleting one that is in use fails */
-  _count?: { variants: number };
+  /** Set on values of a COLOR attribute; null on text ones */
+  colorId?: string | null;
+  color?: { id: string; name: string; hexCode: string } | null;
+  /** How many variants and products carry this value — deleting one in use fails */
+  _count?: { variants: number; productSpecs?: number };
 }
 
 export interface Attribute {
   id: string;
   name: string;
   slug: string;
+  /** TEXT values are typed; COLOR values are picked from the palette */
+  kind: AttributeKind;
+  /** True: a variant axis. False: a product specification, stated once. */
+  isVariant: boolean;
   sortOrder: number;
   values: AttributeValue[];
   /** Vendor who created it; null for seeded or admin-created attributes */
   createdById?: string | null;
   /** An admin has curated it — the original vendor can no longer change it */
   adminLocked?: boolean;
-  _count?: { values: number };
+  _count?: { values: number; products?: number };
 }
 
 export interface Variant {
@@ -85,6 +106,10 @@ export interface Product {
   isFeatured: boolean;
   images?: ProductImage[];
   variants?: Variant[];
+  /** Which attributes this product uses — variant axes and specs alike */
+  attributes?: Array<{ attributeId: string }>;
+  /** Chosen values for the spec (non-variant) attributes above */
+  specValues?: Array<{ valueId: string }>;
   createdAt?: string;
 }
 

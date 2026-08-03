@@ -5,6 +5,7 @@ import { useAuth } from '@/store/auth';
 import { DataTable, type Column } from '@/components/DataTable';
 import { useDialogs } from '@/components/Dialogs';
 import { AttributeEditDialog, type AttributeTarget } from '@/components/AttributeEditDialog';
+import { Swatch } from '@/components/Swatch';
 import type { Attribute } from '@/lib/types';
 
 /**
@@ -62,6 +63,14 @@ export function Attributes() {
       render: (a) => (
         <div className="flex items-center gap-2">
           <span className="font-medium">{a.name}</span>
+          {/* Scope is the thing that changes what the product form does with an
+              attribute, so it is stated on the row rather than hidden in the edit
+              dialog. Variant axes are the default and stay unlabelled. */}
+          {!a.isVariant && (
+            <span className="badge-info" title="Stated once per product; never creates a variant">
+              Specification
+            </span>
+          )}
           {a.createdById &&
             (a.adminLocked ? (
               <span className="badge-neutral" title="Curated by the platform">
@@ -84,13 +93,14 @@ export function Attributes() {
         a.values.length ? (
           <div className="flex flex-wrap gap-1">
             {a.values.slice(0, 8).map((v) => {
-              const used = v._count?.variants ?? 0;
+              const used = (v._count?.variants ?? 0) + (v._count?.productSpecs ?? 0);
               return (
                 <span
                   key={v.id}
-                  title={used ? `Used by ${used} variant${used === 1 ? '' : 's'}` : 'Not used yet'}
+                  title={used ? `Used by ${used} product${used === 1 ? '' : 's'}` : 'Not used yet'}
                   className={used ? 'badge bg-muted text-ink' : 'badge-neutral'}
                 >
+                  {v.color && <Swatch hex={v.color.hexCode} size="sm" className="-ml-0.5" />}
                   {v.value}
                 </span>
               );

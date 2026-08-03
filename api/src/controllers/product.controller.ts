@@ -1,10 +1,29 @@
 import { asyncHandler } from '../utils/asyncHandler';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/ApiError';
-import { slugify } from '../utils/helpers';
+import { slugify, COLOR_AXIS_SLUG, SIZE_AXIS_SLUG } from '../utils/helpers';
 import { Prisma } from '@prisma/client';
 
 // ---- Public ----
+
+/**
+ * The public shape of one attribute value. `color` is null on TEXT attributes
+ * and carries the swatch on COLOR ones, so the picker can paint rather than
+ * print without a second request.
+ */
+const attributeValueSelect = {
+  select: {
+    id: true,
+    value: true,
+    color: { select: { name: true, hexCode: true } },
+    attribute: { select: { name: true, slug: true, kind: true } },
+  },
+} as const;
+
+const variantAttributesInclude = {
+  select: { value: attributeValueSelect },
+  orderBy: { value: { attribute: { sortOrder: 'asc' as const } } },
+} as const;
 
 const productListInclude = {
   images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
@@ -18,12 +37,7 @@ const productListInclude = {
       color: true,
       stockQty: true,
       priceOverride: true,
-      attributes: {
-        select: {
-          value: { select: { id: true, value: true, attribute: { select: { name: true, slug: true } } } },
-        },
-        orderBy: { value: { attribute: { sortOrder: 'asc' as const } } },
-      },
+      attributes: variantAttributesInclude,
     },
   },
 };
@@ -226,12 +240,12 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
     where: { slug: req.params.slug, isActive: true },
     include: {
       images: { orderBy: { sortOrder: 'asc' } },
-      variants: { include: { attributes: {
-        select: {
-          value: { select: { id: true, value: true, attribute: { select: { name: true, slug: true } } } },
-        },
-        orderBy: { value: { attribute: { sortOrder: 'asc' as const } } },
-      } } },
+      variants: { include: { attributes: variantAttributesInclude } },
+      // Product-level specifications — stated once, never a variant axis
+      specValues: {
+        select: { value: attributeValueSelect },
+        orderBy: { value: { attribute: { sortOrder: 'asc' } } },
+      },
       shop: { select: { name: true, slug: true } },
       category: { select: { name: true, slug: true } },
     },
@@ -375,8 +389,12 @@ export const listMyProducts = asyncHandler(async (req, res) => {
 
 export const createProduct = asyncHandler(async (req, res) => {
   const shop = await requireActiveShop(req.user!.sub);
-  const { name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images, variants } =
-    req.body;
+  const {
+    name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images,
+    variants, attributeIds, specValueIds,
+  } = req.body;
+
+  const specValues = await loadSpecValues(specValueIds);
 
   let slug = slugify(name);
   if (await prisma.product.findUnique({ where: { slug } })) {
@@ -407,6 +425,13 @@ export const createProduct = asyncHandler(async (req, res) => {
     },
     include: { images: true, variants: true },
   });
+
+  await syncProductAttributes(
+    prisma,
+    product.id,
+    attributeIds,
+    specValueIds === undefined ? undefined : specValues,
+  );
 
   // Variants are created after the product so each one's id is available for
   // its attribute links (a nested `create` would not hand them back).
@@ -449,6 +474,8 @@ export const getMyProduct = asyncHandler(async (req, res) => {
     include: {
       images: { orderBy: { sortOrder: 'asc' } },
       variants: { include: { attributes: { select: { valueId: true } } } },
+      attributes: { select: { attributeId: true }, orderBy: { sortOrder: 'asc' } },
+      specValues: { select: { valueId: true } },
     },
   });
   if (!product) throw new ApiError(404, 'Product not found');
@@ -463,6 +490,68 @@ interface VariantInput {
   attributeValueIds?: string[];
   priceOverride?: number;
   stockQty?: number;
+}
+
+/**
+ * Validate the spec values a product claims, before any transaction opens.
+ * Values of a *variant* attribute are rejected here rather than silently
+ * stored: "Size: L" stated on the product would contradict its own variants.
+ */
+async function loadSpecValues(specValueIds: string[] | undefined) {
+  if (!specValueIds?.length) return [];
+  const ids = [...new Set(specValueIds)];
+  const rows = await prisma.attributeValue.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, attributeId: true, attribute: { select: { name: true, isVariant: true } } },
+  });
+  if (rows.length !== ids.length) {
+    throw new ApiError(400, 'One or more selected attribute values no longer exist');
+  }
+  const axis = rows.find((r) => r.attribute.isVariant);
+  if (axis) {
+    throw new ApiError(
+      400,
+      `"${axis.attribute.name}" is a variant attribute, so its values belong on a variant rather than on the product`,
+    );
+  }
+  return rows;
+}
+
+/**
+ * Persist which attributes a product uses, and the values of its spec
+ * attributes. Both sets are replaced wholesale — a handful of rows per product,
+ * where diffing would buy nothing but bugs.
+ *
+ * `undefined` means "not sent, leave alone"; `[]` means "clear it".
+ */
+async function syncProductAttributes(
+  tx: Prisma.TransactionClient,
+  productId: string,
+  attributeIds: string[] | undefined,
+  specValues: Array<{ id: string; attributeId: string }> | undefined,
+) {
+  if (attributeIds !== undefined) {
+    const wanted = [...new Set(attributeIds)];
+    await tx.productAttribute.deleteMany({
+      where: { productId, attributeId: { notIn: wanted.length ? wanted : ['__none__'] } },
+    });
+    if (wanted.length) {
+      await tx.productAttribute.createMany({
+        data: wanted.map((attributeId, i) => ({ productId, attributeId, sortOrder: i })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  if (specValues !== undefined) {
+    await tx.productAttributeValue.deleteMany({ where: { productId } });
+    if (specValues.length) {
+      await tx.productAttributeValue.createMany({
+        data: specValues.map((v) => ({ productId, valueId: v.id })),
+        skipDuplicates: true,
+      });
+    }
+  }
 }
 
 /**
@@ -498,8 +587,8 @@ function denormalise(
   }
   const picked = v.attributeValueIds.map((id) => values.get(id)!).filter(Boolean);
   return {
-    size: picked.find((p) => p.slug === 'size')?.value ?? null,
-    color: picked.find((p) => p.slug === 'color')?.value ?? null,
+    size: picked.find((p) => p.slug === SIZE_AXIS_SLUG)?.value ?? null,
+    color: picked.find((p) => p.slug === COLOR_AXIS_SLUG)?.value ?? null,
   };
 }
 
@@ -511,14 +600,17 @@ export const updateProduct = asyncHandler(async (req, res) => {
   });
   if (!existing || existing.shopId !== shop.id) throw new ApiError(404, 'Product not found');
 
-  const { name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images, variants } =
-    req.body;
+  const {
+    name, description, brand, categoryId, basePrice, salePrice, isActive, isFeatured, images,
+    variants, attributeIds, specValueIds,
+  } = req.body;
 
-  // Resolved BEFORE the transaction opens. It is a plain read, and running it
-  // inside the callback issued a query on the global client while the
+  // Resolved BEFORE the transaction opens. These are plain reads, and running
+  // them inside the callback issued queries on the global client while the
   // transaction held a connection — against a remote database that reliably
   // blew Prisma's 5s interactive-transaction timeout.
   const valueMap = await loadAttributeValues((variants ?? []) as VariantInput[]);
+  const specValues = await loadSpecValues(specValueIds);
 
   const product = await prisma.$transaction(async (tx) => {
     const data: Prisma.ProductUpdateInput = {
@@ -552,6 +644,13 @@ export const updateProduct = asyncHandler(async (req, res) => {
         });
       }
     }
+
+    await syncProductAttributes(
+      tx,
+      existing.id,
+      attributeIds,
+      specValueIds === undefined ? undefined : specValues,
+    );
 
     // Sync variants if provided: update kept, create new, remove missing
     if (variants !== undefined) {
@@ -619,6 +718,8 @@ export const updateProduct = asyncHandler(async (req, res) => {
       include: {
         images: { orderBy: { sortOrder: 'asc' } },
         variants: { include: { attributes: { select: { valueId: true } } } },
+        attributes: { select: { attributeId: true }, orderBy: { sortOrder: 'asc' } },
+        specValues: { select: { valueId: true } },
       },
     });
   },

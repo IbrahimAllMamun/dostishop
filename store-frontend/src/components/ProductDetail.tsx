@@ -22,6 +22,18 @@ export function ProductDetail({ product }: { product: Product }) {
   const variants = product.variants ?? [];
   const groups = useMemo(() => attributeGroups(variants), [variants]);
 
+  /** Spec values arrive flat; group them by attribute so each gets one row. */
+  const specs = useMemo(() => {
+    const byAttribute = new Map<string, { name: string; values: Array<{ value: string; hex: string | null }> }>();
+    for (const { value } of product.specValues ?? []) {
+      const { slug, name } = value.attribute;
+      const row = byAttribute.get(slug) ?? { name, values: [] };
+      row.values.push({ value: value.value, hex: value.color?.hexCode ?? null });
+      byAttribute.set(slug, row);
+    }
+    return [...byAttribute.values()];
+  }, [product.specValues]);
+
   // Pre-select the first in-stock variant's values so the page opens on a
   // valid, buyable combination rather than an empty picker.
   const [picked, setPicked] = useState<Record<string, string>>(() => {
@@ -193,6 +205,36 @@ export function ProductDetail({ product }: { product: Product }) {
             {t('product.buyNow')}
           </button>
         </div>
+
+        {/* Specifications — facts about the product, grouped by attribute.
+            One attribute can hold several values ("Features: Waterproof,
+            Lightweight"), so each row joins its own. */}
+        {specs.length > 0 && (
+          <div className="border-t border-ink/10 pt-4">
+            <h2 className="mb-2 text-sm font-medium">{t('product.specs')}</h2>
+            <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+              {specs.map((spec) => (
+                <div key={spec.name} className="flex justify-between gap-3 sm:justify-start">
+                  <dt className="text-muted">{spec.name}</dt>
+                  <dd className="flex flex-wrap items-center gap-1.5 font-medium">
+                    {spec.values.map((v) => (
+                      <span key={v.value} className="inline-flex items-center gap-1.5">
+                        {v.hex && (
+                          <span
+                            aria-hidden
+                            style={{ backgroundColor: v.hex }}
+                            className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-inset ring-ink/20"
+                          />
+                        )}
+                        {v.value}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         <div className="rounded-2xl bg-sand/60 p-4 text-sm text-ink/70">
           {t('product.codBanner')}
